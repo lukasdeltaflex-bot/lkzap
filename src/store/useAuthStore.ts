@@ -3,10 +3,14 @@ import { persist } from 'zustand/middleware';
 
 interface AuthStore {
   isAuthenticated: boolean;
-  user: { login: string } | null;
+  user: { 
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+  } | null;
   
   // Actions
-  login: (login: string, pass: string) => boolean;
+  setAuthState: (firebaseUser: any) => void;
   logout: () => void;
 }
 
@@ -16,12 +20,19 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       user: null,
 
-      login: (login: string, pass: string) => {
-        if (login === 'admin' && pass === '123456') {
-          set({ isAuthenticated: true, user: { login } });
-          return true;
+      setAuthState: (firebaseUser) => {
+        if (firebaseUser) {
+          set({ 
+            isAuthenticated: true, 
+            user: { 
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName
+            } 
+          });
+        } else {
+          set({ isAuthenticated: false, user: null });
         }
-        return false;
       },
 
       logout: () => set({ isAuthenticated: false, user: null })

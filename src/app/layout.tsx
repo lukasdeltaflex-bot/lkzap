@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { AuthGuard } from "../components/AuthGuard";
 import { Header } from "../components/Header";
+import { AuthProvider } from "../context/AuthContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -22,12 +23,14 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${outfit.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthGuard>
-            <Header />
-            <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
-              {children}
-            </main>
-          </AuthGuard>
+          <AuthProvider>
+            <AuthGuard>
+              <Header />
+              <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+                {children}
+              </main>
+            </AuthGuard>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

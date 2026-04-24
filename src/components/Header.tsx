@@ -7,19 +7,30 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "../lib/firebase";
 
 export function Header() {
   const { logoBase64 } = useSettingsStore();
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!isAuthenticated || pathname === '/login') return null;
+  const isPublicRoute = pathname === '/login' || pathname === '/register';
+  if (!isAuthenticated || isPublicRoute) return null;
 
   return (
     <header className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
@@ -61,8 +72,15 @@ export function Header() {
             <Settings size={20} />
           </Link>
 
+          <div className="hidden lg:flex items-center gap-2 mr-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+              {user?.displayName || user?.email?.split('@')[0]}
+            </span>
+          </div>
+
           <button 
-            onClick={logout}
+            onClick={handleLogout}
             className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors dark:text-slate-300 dark:hover:text-red-400"
           >
             <LogOut size={18} />
