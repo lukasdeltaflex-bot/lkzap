@@ -18,6 +18,7 @@ export function Header() {
   const pathname = usePathname();
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error) {

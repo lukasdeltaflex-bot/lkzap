@@ -19,15 +19,17 @@ export default function RegisterPage() {
     setIsLoading(true);
     setErrorMessage("");
 
+    if (!auth) {
+      setErrorMessage("Firebase não configurado.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update profile with name and optionally phone (using display name for now as Auth profile is limited)
       await updateProfile(userCredential.user, {
         displayName: name,
       });
-      
-      //redirection handled by AuthGuard
     } catch (error: any) {
       console.error("Register Error:", error);
       switch (error.code) {

@@ -18,9 +18,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMessage("");
     
+    if (!auth) {
+      setErrorMessage("Configuração do Firebase ausente no servidor. Verifique as chaves.");
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // AuthProvider will handle redirection via onAuthStateChanged + AuthGuard
     } catch (error: any) {
       console.error("Login Error:", error);
       switch (error.code) {
@@ -46,6 +51,12 @@ export default function LoginPage() {
   const handleResetPassword = async () => {
     if (!email) {
       setErrorMessage("Informe seu e-mail para recuperar a senha.");
+      return;
+    }
+    
+    if (!auth) {
+      setErrorMessage("Erro de configuração do Firebase.");
+      setIsLoading(false);
       return;
     }
     
