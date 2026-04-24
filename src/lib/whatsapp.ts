@@ -1,4 +1,5 @@
 import { Lead } from '../types';
+import { normalizePhone } from './utils';
 
 const formatMoney = (value: number) => {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,15 +18,16 @@ export const generateWhatsAppLink = (lead: Lead, messageIndex: number): string =
   }
 
   const encodedText = encodeURIComponent(text);
-  const cleanPhone = lead.phone.replace(/\D/g, '');
+  const cleanPhone = normalizePhone(lead.phone);
   
-  return `https://wa.me/55${cleanPhone}?text=${encodedText}`;
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
 
 export const generateReabordagemLink = (lead: Lead): string => {
   const text = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
   const encodedText = encodeURIComponent(text);
-  const cleanPhone = lead.phone.replace(/\D/g, '');
+  const cleanPhone = normalizePhone(lead.phone);
   
-  return `https://wa.me/55${cleanPhone}?text=${encodedText}`;
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
+

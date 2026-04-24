@@ -1,5 +1,3 @@
-export type Bank = 'Daycoval' | 'BMG' | 'Pan' | 'C6' | 'Olé' | 'Master' | 'Outros';
-
 export type LeadStatus =
   | 'Novo'
   | 'Consultado'
@@ -27,7 +25,8 @@ export interface Lead {
   name: string;
   cpf: string;
   phone: string;
-  bank: Bank;
+  bank: string;
+  origin?: string;
   availableValue: number;
   consultDate: string; // ISO String
   status: LeadStatus;

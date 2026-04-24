@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
-import { Bank } from '../types';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
+import { normalizeCPF, normalizePhone } from '../lib/utils';
+import { Lead } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -12,24 +14,27 @@ interface Props {
 
 export const AddLeadModal = ({ isOpen, onClose }: Props) => {
   const { addLead } = useLeadStore();
+  const { banks, origins } = useSettingsStore();
 
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
-  const [bank, setBank] = useState<Bank | ''>('');
+  const [bank, setBank] = useState<string>(banks.length > 0 ? banks[0] : '');
+  const [origin, setOrigin] = useState<string>(origins.length > 0 ? origins[0] : '');
   const [value, setValue] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !cpf || !phone || !bank || !value) return;
+    if (!name || !cpf || !phone || !bank || !value || !origin) return;
 
     addLead({
       name,
-      cpf,
-      phone,
-      bank: bank as Bank,
+      cpf: normalizeCPF(cpf),
+      phone: normalizePhone(phone),
+      bank,
+      origin,
       availableValue: Number(value),
       consultDate: new Date().toISOString(),
       status: 'Com limite',
@@ -41,22 +46,23 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
     setName('');
     setCpf('');
     setPhone('');
-    setBank('');
+    setBank(banks.length > 0 ? banks[0] : '');
+    setOrigin(origins.length > 0 ? origins[0] : '');
     setValue('');
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white">Novo Cliente</h2>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 cursor-pointer">
             <X size={20} />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome Completo</label>
             <input 
@@ -94,23 +100,36 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Origem do Lead</label>
+              <select 
+                required
+                value={origin} 
+                onChange={e => setOrigin(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+              >
+                <option value="" disabled>Selecione a origem</option>
+                {origins.map(o => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Banco</label>
               <select 
                 required
                 value={bank} 
-                onChange={e => setBank(e.target.value as Bank)}
+                onChange={e => setBank(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
               >
                 <option value="" disabled>Selecione</option>
-                <option value="Daycoval">Daycoval</option>
-                <option value="BMG">BMG</option>
-                <option value="Pan">Pan</option>
-                <option value="C6">C6</option>
-                <option value="Olé">Olé</option>
-                <option value="Master">Master</option>
-                <option value="Outros">Outros</option>
+                {banks.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
               </select>
             </div>
             <div>
