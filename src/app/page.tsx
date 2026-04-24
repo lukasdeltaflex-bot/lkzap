@@ -6,7 +6,8 @@ import { LeadTable } from "../components/LeadTable";
 import { AddLeadModal } from "../components/AddLeadModal";
 import { Plus } from "lucide-react";
 
-export default function Home() {
+// Main landing page for CRM
+export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
