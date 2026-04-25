@@ -111,13 +111,12 @@ export default function RegisterPage() {
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Armazenar o telefone no perfil se possível, ou pelo menos logar para simular o "salvar"
-      // Nota: Firebase Auth nativo não permite salvar telefone direto no updateProfile sem verificação,
-      // mas garantimos aqui que o dado está formatado corretamente como solicitado (55XX9XXXXXXXX)
+      // Armazenar o nome no perfil
       await updateProfile(userCredential.user, {
         displayName: name,
       });
 
+      // Simulação de salvar o telefone (já que o Auth não tem campo nativo e o Firestore é opcional/futuro)
       console.log("Usuário criado com sucesso:", {
         uid: userCredential.user.uid,
         email: email,
@@ -127,19 +126,28 @@ export default function RegisterPage() {
       setSuccessMessage("Conta criada com sucesso! Redirecionando...");
       
     } catch (error: any) {
-      console.error("Register Error:", error);
+      console.error("Firebase register error:", error);
+      
+      // Mapeamento de erros profissionais solicitados
       switch (error.code) {
         case "auth/email-already-in-use":
-          setErrorMessage("Este e-mail já está em uso.");
+          setErrorMessage("Este e-mail já está cadastrado.");
           break;
         case "auth/invalid-email":
-          setErrorMessage("E-mail inválido.");
+          setErrorMessage("Digite um e-mail válido.");
           break;
         case "auth/weak-password":
           setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
           break;
+        case "auth/operation-not-allowed":
+          setErrorMessage("Login por e-mail/senha não está ativado no Firebase.");
+          break;
+        case "auth/network-request-failed":
+          setErrorMessage("Falha de conexão. Verifique sua internet.");
+          break;
         default:
-          setErrorMessage("Erro ao criar conta. Tente novamente.");
+          // Fallback para debug (mostra erro técnico se não for um dos mapeados)
+          setErrorMessage(`Erro (${error.code || "unknown"}): ${error.message || "Erro inesperado. Tente novamente."}`);
       }
     } finally {
       setIsLoading(false);
