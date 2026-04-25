@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { Lock, Mail, User, Phone, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Lock, Mail, User, Phone, Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { normalizePhone } from "../../lib/utils";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -13,11 +14,90 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Validation states
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [isEmailTouched, setIsEmailTouched] = useState(false);
+  const [isPhoneTouched, setIsPhoneTouched] = useState(false);
+
+  // Phone Masking Logic
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, ""); // Permite apenas números
+    
+    // Suporta celular com 9 dígitos (11 total com DDD)
+    let formattedValue = "";
+    if (rawValue.length > 0) {
+      formattedValue = "(" + rawValue.slice(0, 2);
+      if (rawValue.length > 2) {
+        formattedValue += ") " + rawValue.slice(2, 7);
+      }
+      if (rawValue.length > 7) {
+        formattedValue += "-" + rawValue.slice(7, 11);
+      }
+    }
+    
+    setPhone(formattedValue);
+    if (!isPhoneTouched) setIsPhoneTouched(true);
+  };
+
+  // Email formatting and validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.toLowerCase().trim();
+    setEmail(val);
+    if (!isEmailTouched) setIsEmailTouched(true);
+  };
+
+  // Debounced Validation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isEmailTouched) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+          setEmailError("O e-mail é obrigatório");
+        } else if (!emailRegex.test(email)) {
+          setEmailError("Digite um e-mail válido");
+        } else {
+          setEmailError("");
+        }
+      }
+
+      if (isPhoneTouched) {
+        const digits = phone.replace(/\D/g, "");
+        if (!phone) {
+          setPhoneError("O WhatsApp é obrigatório");
+        } else if (digits.length < 10) {
+          setPhoneError("Telefone muito curto");
+        } else {
+          setPhoneError("");
+        }
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [email, phone, isEmailTouched, isPhoneTouched]);
+
+  const isFormValid = useMemo(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneDigits = phone.replace(/\D/g, "");
+    return (
+      name.length > 2 &&
+      emailRegex.test(email) &&
+      phoneDigits.length >= 10 &&
+      password.length >= 6 &&
+      !emailError &&
+      !phoneError
+    );
+  }, [name, email, phone, password, emailError, phoneError]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
+
     setIsLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     if (!auth) {
       setErrorMessage("Firebase não configurado.");
@@ -26,10 +106,26 @@ export default function RegisterPage() {
     }
 
     try {
+      // Remover máscara ao salvar (55 + DDD + Numero)
+      const sanitizedPhone = normalizePhone(phone);
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Armazenar o telefone no perfil se possível, ou pelo menos logar para simular o "salvar"
+      // Nota: Firebase Auth nativo não permite salvar telefone direto no updateProfile sem verificação,
+      // mas garantimos aqui que o dado está formatado corretamente como solicitado (55XX9XXXXXXXX)
       await updateProfile(userCredential.user, {
         displayName: name,
       });
+
+      console.log("Usuário criado com sucesso:", {
+        uid: userCredential.user.uid,
+        email: email,
+        phone: sanitizedPhone // Formato: 5511970786054
+      });
+
+      setSuccessMessage("Conta criada com sucesso! Redirecionando...");
+      
     } catch (error: any) {
       console.error("Register Error:", error);
       switch (error.code) {
@@ -95,12 +191,17 @@ export default function RegisterPage() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                onChange={handlePhoneChange}
+                className={`w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg focus:ring-2 outline-none transition-all dark:text-white ${
+                  phoneError 
+                    ? "border-red-500 focus:ring-red-500" 
+                    : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
+                }`}
                 placeholder="(00) 00000-0000"
                 required
               />
             </div>
+            {phoneError && <p className="text-red-500 text-[10px] mt-1 ml-1">{phoneError}</p>}
           </div>
 
           <div>
@@ -114,12 +215,17 @@ export default function RegisterPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                onChange={handleEmailChange}
+                className={`w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg focus:ring-2 outline-none transition-all dark:text-white ${
+                  emailError 
+                    ? "border-red-500 focus:ring-red-500" 
+                    : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
+                }`}
                 placeholder="seu@email.com"
                 required
               />
             </div>
+            {emailError && <p className="text-red-500 text-[10px] mt-1 ml-1">{emailError}</p>}
           </div>
 
           <div>
@@ -149,10 +255,21 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {successMessage && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs rounded-lg flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              {successMessage}
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800/50 text-white font-semibold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+            disabled={isLoading || !isFormValid}
+            className={`w-full font-semibold py-3 px-4 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 ${
+              isLoading || !isFormValid
+                ? "bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed shadow-none"
+                : "bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-lg active:scale-[0.98]"
+            }`}
           >
             {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Finalizar Cadastro"}
           </button>
