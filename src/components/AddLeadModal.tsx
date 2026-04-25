@@ -27,7 +27,8 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !cpf || !phone || !bank || !value || !origin) return;
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!name || !cpf || phoneDigits.length < 10 || !bank || !value || !origin) return;
 
     addLead({
       name,
@@ -93,10 +94,28 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 required
                 type="text" 
                 value={phone} 
-                onChange={e => setPhone(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  if (val.length <= 11) {
+                    let formatted = "";
+                    if (val.length > 0) {
+                      formatted = "(" + val.slice(0, 2);
+                      if (val.length > 2) formatted += ") " + val.slice(2, 7);
+                      if (val.length > 7) formatted += "-" + val.slice(7, 11);
+                    }
+                    setPhone(formatted);
+                  }
+                }}
+                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-lg px-4 py-2.5 outline-none focus:ring-2 transition-all text-slate-800 dark:text-white ${
+                  phone && phone.replace(/\D/g, "").length < 10 
+                    ? "border-red-500 focus:ring-red-500 shadow-sm shadow-red-100" 
+                    : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
+                }`}
                 placeholder="(11) 99999-9999"
               />
+              {phone && phone.replace(/\D/g, "").length < 10 && (
+                <p className="text-red-500 text-[10px] mt-1 font-medium">Digite um WhatsApp válido</p>
+              )}
             </div>
           </div>
 

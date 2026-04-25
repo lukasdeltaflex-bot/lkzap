@@ -5,17 +5,43 @@ export const normalizeCPF = (cpf: string): string => {
 export const normalizePhone = (phone: string): string => {
   const digits = phone.replace(/\D/g, '');
   if (!digits) return '';
-  // Se já tiver 55 no começo, mantém. Se não tiver, adiciona.
-  // Assumindo que o usuário digita DDD + Numero (ex: 11999999999 com 11 digitos)
-  if (digits.length === 10 || digits.length === 11) {
-    return `55${digits}`;
-  }
+  
   // Se for maior que 11 e começar com 55, é possível que já esteja com o DDI
   if (digits.startsWith('55') && digits.length >= 12) {
     return digits;
   }
-  // Fallback
+  
+  // Fallback: Adiciona 55 se não tiver
   return `55${digits}`;
+};
+
+export const formatPhone = (val: string): string => {
+  const digits = val.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  let formatted = "(" + digits.slice(0, 2);
+  if (digits.length > 2) {
+    formatted += ") " + digits.slice(2, 7);
+  }
+  if (digits.length > 7) {
+    formatted += "-" + digits.slice(7, 11);
+  }
+  return formatted;
+};
+
+export const formatDisplayPhone = (phone: string): string => {
+  // Recebe 5511970786054 ou similar
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length >= 12) {
+    const core = digits.slice(2); // remove 55
+    if (core.length === 11) {
+      return `(${core.slice(0, 2)}) ${core.slice(2, 7)}-${core.slice(7)}`;
+    }
+    if (core.length === 10) {
+      return `(${core.slice(0, 2)}) ${core.slice(2, 6)}-${core.slice(6)}`;
+    }
+    return core;
+  }
+  return phone;
 };
 
 // Also export a helper for checking duplicates
