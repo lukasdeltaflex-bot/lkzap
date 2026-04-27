@@ -8,9 +8,11 @@ interface LeadStore {
   sendsTodayCount: number;
   lastSendDate: string | null;
   messageIndex: number;
-  cooldownUntil: number | null; // Timestamp in MS
+  dashboardFilter: string | null;
+  cooldownUntil: number | null;
   
   // Actions
+  setDashboardFilter: (filter: string | null) => void;
   addLead: (lead: Omit<Lead, 'id'>) => void;
   updateLead: (id: string, data: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
@@ -28,7 +30,10 @@ export const useLeadStore = create<LeadStore>()(
       sendsTodayCount: 0,
       lastSendDate: null,
       messageIndex: 0,
+      dashboardFilter: null,
       cooldownUntil: null,
+
+      setDashboardFilter: (filter) => set({ dashboardFilter: filter }),
 
       addLead: (leadData) => set((state) => ({
         leads: [{ ...leadData, id: crypto.randomUUID() }, ...state.leads]

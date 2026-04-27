@@ -5,29 +5,30 @@ const formatMoney = (value: number) => {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-export const generateWhatsAppLink = (lead: Lead, messageIndex: number): string => {
-  const valueFormatted = formatMoney(lead.availableValue);
-  let text = '';
+const replaceVariables = (content: string, lead: Lead) => {
+  return content
+    .replace(/{nome}/g, lead.name)
+    .replace(/{valor}/g, formatMoney(lead.availableValue))
+    .replace(/{banco}/g, lead.bank)
+    .replace(/{origem}/g, lead.origin || '')
+    .replace(/{telefone}/g, lead.phone)
+    .replace(/{cpf}/g, lead.cpf);
+};
 
-  if (messageIndex === 0) {
-    text = `💳 Olá, ${lead.name}! Você tem R$${valueFormatted} disponíveis para saque complementar do seu cartão ${lead.bank}.\nLiberação rápida em até 48h ✅\nSem aumento de desconto no INSS ❌📉\nDigite 1 para receber o link.`;
-  } else if (messageIndex === 1) {
-    text = `${lead.name}, identifiquei um valor de R$${valueFormatted} disponível no seu benefício hoje.\nPosso te explicar como sacar sem aumentar seu desconto.\nQuer receber o link?`;
-  } else {
-    text = `${lead.name}, esse valor de R$${valueFormatted} disponível no seu cartão ${lead.bank} pode não ficar liberado por muito tempo.\nSe quiser, te envio o link para saque agora.`;
-  }
+export const generateWhatsAppLink = (lead: Lead, templateContent: string): string => {
+  const text = replaceVariables(templateContent, lead);
+  const encodedText = encodeURIComponent(text);
+  const cleanPhone = normalizePhone(lead.phone);
+  
+  // Use https://wa.me/ or https://api.whatsapp.com/send
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+};
 
+export const generateReabordagemLink = (lead: Lead, templateContent?: string): string => {
+  const defaultText = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
+  const text = templateContent ? replaceVariables(templateContent, lead) : defaultText;
   const encodedText = encodeURIComponent(text);
   const cleanPhone = normalizePhone(lead.phone);
   
   return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
-
-export const generateReabordagemLink = (lead: Lead): string => {
-  const text = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
-  const encodedText = encodeURIComponent(text);
-  const cleanPhone = normalizePhone(lead.phone);
-  
-  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
-};
-

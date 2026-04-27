@@ -20,12 +20,33 @@ export type LeadAction =
   | 'Respondeu'
   | 'Interessado';
 
+export interface Bank {
+  id: string;
+  name: string;
+  logo?: string;
+  active: boolean;
+}
+
+export interface Tabulation {
+  id: string;
+  name: string;
+}
+
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  content: string;
+  tabId: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
 export interface Lead {
   id: string;
   name: string;
   cpf: string;
   phone: string;
-  bank: string;
+  bank: string; // Keep as string for now to match current store, but will map items
   origin?: string;
   availableValue: number;
   consultDate: string; // ISO String

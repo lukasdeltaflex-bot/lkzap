@@ -19,7 +19,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
-  const [bank, setBank] = useState<string>(banks.length > 0 ? banks[0] : '');
+  const [bank, setBank] = useState<string>(banks.length > 0 ? (typeof banks[0] === 'string' ? banks[0] : banks[0].name) : '');
   const [origin, setOrigin] = useState<string>(origins.length > 0 ? origins[0] : '');
   const [value, setValue] = useState('');
 
@@ -56,7 +56,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
     setName('');
     setCpf('');
     setPhone('');
-    setBank(banks.length > 0 ? banks[0] : '');
+    setBank(banks.length > 0 ? (typeof banks[0] === 'string' ? banks[0] : banks[0].name) : '');
     setOrigin(origins.length > 0 ? origins[0] : '');
     setValue('');
     onClose();
@@ -161,7 +161,9 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
               >
                 <option value="" disabled>Selecione</option>
                 {banks.map(b => (
-                  <option key={b} value={b}>{b}</option>
+                  <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                    {typeof b === 'string' ? b : b.name}
+                  </option>
                 ))}
               </select>
             </div>

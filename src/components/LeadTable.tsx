@@ -24,8 +24,8 @@ import { format, parseISO } from 'date-fns';
 import { ImportModal } from './ImportModal';
 
 export const LeadTable = () => {
-  const { leads, updateLead, cooldownUntil, setCooldown, incrementSendsToday, getNextMessageAndRotate } = useLeadStore();
-  const { banks, origins } = useSettingsStore();
+  const { leads, updateLead, cooldownUntil, setCooldown, incrementSendsToday, getNextMessageAndRotate, dashboardFilter, setDashboardFilter } = useLeadStore();
+  const { banks, origins, messageTemplates, tabulations } = useSettingsStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBank, setFilterBank] = useState('');
@@ -33,8 +33,12 @@ export const LeadTable = () => {
   const [filterStatus, setFilterStatus] = useState('Com limite');
   const [filterQueue, setFilterQueue] = useState('Pronto para enviar');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  
   const [now, setNow] = useState(Date.now());
+  const [leadTemplateIds, setLeadTemplateIds] = useState<Record<string, string>>({});
+
+  const getBankInfo = (bankName: string) => {
+    return banks.find(b => (typeof b === 'string' ? b : b.name) === bankName);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -54,12 +58,26 @@ export const LeadTable = () => {
       
       const matchesBank = filterBank === '' || lead.bank === filterBank;
       const matchesOrigin = filterOrigin === '' || lead.origin === filterOrigin;
-      const matchesStatus = filterStatus === '' || lead.status === filterStatus;
-      const matchesQueue = filterQueue === '' || lead.queue === filterQueue;
+      
+      // If dashboard filter is active, override other filters for that dimension
+      if (dashboardFilter === 'ready') {
+        if (lead.status !== 'Com limite' || lead.queue !== 'Pronto para enviar') return false;
+      } else if (dashboardFilter === 'sent') {
+        if (lead.status !== 'Mensagem enviada') return false;
+      } else if (dashboardFilter === 'responded') {
+        if (lead.lastAction !== 'Respondeu' && lead.lastAction !== 'Interessado') return false;
+      } else if (dashboardFilter === 'closed') {
+        if (lead.status !== 'Fechado') return false;
+      } else {
+        // Only apply standard filters if no dashboard filter
+        const matchesStatus = filterStatus === '' || lead.status === filterStatus;
+        const matchesQueue = filterQueue === '' || lead.queue === filterQueue;
+        if (!matchesStatus || !matchesQueue) return false;
+      }
 
-      return matchesSearch && matchesBank && matchesOrigin && matchesStatus && matchesQueue;
+      return matchesSearch && matchesBank && matchesOrigin;
     });
-  }, [leads, searchTerm, filterBank, filterOrigin, filterStatus, filterQueue]);
+  }, [leads, searchTerm, filterBank, filterOrigin, filterStatus, filterQueue, dashboardFilter]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -67,13 +85,19 @@ export const LeadTable = () => {
     setFilterOrigin('');
     setFilterStatus('');
     setFilterQueue('');
+    setDashboardFilter(null);
   };
 
   const handleSendWhatsApp = (lead: Lead) => {
     if (isCooldownActive) return;
 
-    const msgIndex = getNextMessageAndRotate();
-    const link = generateWhatsAppLink(lead, msgIndex);
+    // Get selected template or default
+    const selectedTmplId = leadTemplateIds[lead.id];
+    const template = messageTemplates.find(t => t.id === selectedTmplId) || 
+                     messageTemplates.find(t => t.isDefault) || 
+                     messageTemplates[0];
+
+    const link = generateWhatsAppLink(lead, template.content);
     
     updateLead(lead.id, {
       status: 'Mensagem enviada',
@@ -203,7 +227,11 @@ export const LeadTable = () => {
             className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
             <option value="">Todos Bancos</option>
-            {banks.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+            {banks.map(bank => (
+              <option key={typeof bank === 'string' ? bank : bank.id} value={typeof bank === 'string' ? bank : bank.name}>
+                {typeof bank === 'string' ? bank : bank.name}
+              </option>
+            ))}
           </select>
 
           <select 
@@ -243,7 +271,7 @@ export const LeadTable = () => {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800/50">
               <tr>
-                <th className="px-6 py-4">Nome / Origin</th>
+                <th className="px-6 py-4">Nome / Origem</th>
                 <th className="px-6 py-4">CPF / Tel</th>
                 <th className="px-6 py-4">Banco</th>
                 <th className="px-6 py-4 text-right">Valor</th>
@@ -284,9 +312,18 @@ export const LeadTable = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-1 rounded text-[10px] font-bold">
-                        {lead.bank}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {getBankInfo(lead.bank)?.logo ? (
+                          <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-6 h-6 rounded-full object-contain bg-white border border-slate-200" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                            {lead.bank.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          {lead.bank}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
                       {formatCurrency(lead.availableValue)}
@@ -298,20 +335,24 @@ export const LeadTable = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                      <select 
+                        value={leadTemplateIds[lead.id] || (messageTemplates.find(t => t.isDefault)?.id || '')}
+                        onChange={(e) => setLeadTemplateIds(prev => ({ ...prev, [lead.id]: e.target.value }))}
+                        className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-1 outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                        {messageTemplates.map(tmpl => (
+                          <option key={tmpl.id} value={tmpl.id}>
+                            {tmpl.name}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         onClick={() => handleSendWhatsApp(lead)}
                         disabled={isCooldownActive}
-                        className="p-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30 disabled:opacity-50 transition-colors"
+                        className="p-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30 disabled:opacity-50 transition-colors inline-flex align-middle"
                         title="Enviar WhatsApp"
                       >
                         <MessageCircle size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleReabordar(lead)}
-                        className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
-                        title="Reabordagem Rápida"
-                      >
-                        <RefreshCw size={18} />
                       </button>
                     </td>
                   </tr>
