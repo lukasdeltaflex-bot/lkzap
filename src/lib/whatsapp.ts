@@ -6,6 +6,7 @@ const formatMoney = (value: number) => {
 };
 
 const replaceVariables = (content: string, lead: Lead) => {
+  // Substitute placeholders without encoding here. Emojis should be present literally in templates.
   return content
     .replace(/{nome}/g, lead.name)
     .replace(/{valor}/g, formatMoney(lead.availableValue))
@@ -16,19 +17,19 @@ const replaceVariables = (content: string, lead: Lead) => {
 };
 
 export const generateWhatsAppLink = (lead: Lead, templateContent: string): string => {
-  const text = replaceVariables(templateContent, lead);
-  const encodedText = encodeURIComponent(text);
+  // Build final message once, then encode a single time.
+  const mensagemFinal = replaceVariables(templateContent, lead);
+  const encoded = encodeURIComponent(mensagemFinal);
   const cleanPhone = normalizePhone(lead.phone);
-  
-  // Use https://wa.me/ or https://api.whatsapp.com/send
-  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+
+  return `https://wa.me/${cleanPhone}?text=${encoded}`;
 };
 
 export const generateReabordagemLink = (lead: Lead, templateContent?: string): string => {
   const defaultText = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
-  const text = templateContent ? replaceVariables(templateContent, lead) : defaultText;
-  const encodedText = encodeURIComponent(text);
+  const mensagemFinal = templateContent ? replaceVariables(templateContent, lead) : defaultText;
+  const encoded = encodeURIComponent(mensagemFinal);
   const cleanPhone = normalizePhone(lead.phone);
-  
-  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+
+  return `https://wa.me/${cleanPhone}?text=${encoded}`;
 };
