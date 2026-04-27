@@ -31,7 +31,7 @@ export const Dashboard = () => {
           <Users size={18} />
           <span className="text-sm font-medium uppercase tracking-wider">Prontos</span>
         </div>
-        <span className="text-3xl font-bold text-slate-800 dark:text-white">{readyLeads}</span>
+        <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{readyLeads}</span>
       </div>
 
       <div className="glass-panel p-4 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
@@ -40,7 +40,7 @@ export const Dashboard = () => {
           <span className="text-sm font-medium uppercase tracking-wider">Enviados</span>
         </div>
         <div className="flex items-end space-x-1">
-          <span className="text-3xl font-bold text-slate-800 dark:text-white">{sendsTodayCount}</span>
+          <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{sendsTodayCount}</span>
           <span className="text-sm text-slate-500 mb-1 font-medium">/ 20</span>
         </div>
       </div>
@@ -50,7 +50,7 @@ export const Dashboard = () => {
           <MessageCircleReply size={18} />
           <span className="text-sm font-medium uppercase tracking-wider">Respostas</span>
         </div>
-        <span className="text-3xl font-bold text-slate-800 dark:text-white">{respondedLeads}</span>
+        <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{respondedLeads}</span>
       </div>
 
       <div className="glass-panel p-4 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
@@ -58,7 +58,7 @@ export const Dashboard = () => {
           <CheckCircle size={18} />
           <span className="text-sm font-medium uppercase tracking-wider">Fechados</span>
         </div>
-        <span className="text-3xl font-bold text-slate-800 dark:text-white">{closedLeads}</span>
+        <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{closedLeads}</span>
       </div>
     </div>
   );

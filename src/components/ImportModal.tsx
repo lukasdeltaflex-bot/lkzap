@@ -200,7 +200,7 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="glass-panel w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden flex flex-col h-[85vh]">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white">Importar Lista de Leads</h2>
+          <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-slate-100">Importar Lista de Leads</h2>
           <button onClick={handleClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
             <X size={20} />
           </button>
@@ -208,9 +208,9 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
 
         <div className="p-6 flex-1 overflow-hidden flex flex-col">
           {!hasPreview ? (
-            <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-950/50">
               <Upload size={48} className="text-emerald-500 mb-4" />
-              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <h3 className="text-lg font-medium text-slate-700 dark:text-slate-200 mb-2">
                 Envie sua planilha Excel ou CSV
               </h3>
               <p className="text-sm text-slate-500 mb-6 text-center max-w-md">
@@ -246,7 +246,7 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
               
               <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
                 <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 sticky top-0">
+                  <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 sticky top-0">
                     <tr>
                       <th className="px-4 py-3">Linha</th>
                       <th className="px-4 py-3">Nome</th>
@@ -259,9 +259,9 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
                   </thead>
                   <tbody>
                     {parsedRows.map((row) => (
-                      <tr key={row.originalIndex} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr key={row.originalIndex} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                         <td className="px-4 py-2 text-slate-400">{row.originalIndex}</td>
-                        <td className="px-4 py-2 font-medium">{row.name}</td>
+                        <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{row.name}</td>
                         <td className="px-4 py-2">{row.cpf}</td>
                         <td className="px-4 py-2">{row.phone}</td>
                         <td className="px-4 py-2">{row.bank}</td>

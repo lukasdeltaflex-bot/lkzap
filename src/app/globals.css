@@ -4,6 +4,11 @@
   html {
     background-color: #020617;
   }
+  
+  /* Melhora o contraste padrão para textos no dark mode */
+  .dark body {
+    @apply text-slate-200;
+  }
 }
 
 :root {
@@ -26,12 +31,21 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  @apply antialiased;
+  @apply antialiased transition-colors duration-200;
 }
 
-/* Glass Panels */
+/* Glass Panels - Melhorados para modo escuro real */
 .glass-panel {
-  @apply bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800 transition-colors;
+  @apply bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 transition-all;
+}
+
+.glass-panel-blur {
+  @apply bg-white/70 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 transition-all;
+}
+
+/* Inputs padrão para dark mode */
+input, select, textarea {
+  @apply dark:placeholder-slate-500;
 }
 
 /* Scrollbar */

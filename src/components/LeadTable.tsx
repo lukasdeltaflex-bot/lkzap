@@ -139,7 +139,7 @@ export const LeadTable = () => {
               placeholder="Buscar por nome, CPF ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:placeholder-slate-500 transition-all"
             />
           </div>
           <div className="flex gap-2">
@@ -173,7 +173,7 @@ export const LeadTable = () => {
           <select 
             value={filterStatus} 
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
             <option value="">Filtro Status</option>
             <option value="Novo">Novo</option>
@@ -188,7 +188,7 @@ export const LeadTable = () => {
           <select 
             value={filterQueue} 
             onChange={(e) => setFilterQueue(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
             <option value="">Filtro Fila</option>
             <option value="Pronto para enviar">Pronto para enviar</option>
@@ -200,7 +200,7 @@ export const LeadTable = () => {
           <select 
             value={filterBank} 
             onChange={(e) => setFilterBank(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
             <option value="">Todos Bancos</option>
             {banks.map(bank => <option key={bank} value={bank}>{bank}</option>)}
@@ -209,7 +209,7 @@ export const LeadTable = () => {
           <select 
             value={filterOrigin} 
             onChange={(e) => setFilterOrigin(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
             <option value="">Todas Origens</option>
             {origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}
@@ -264,7 +264,7 @@ export const LeadTable = () => {
                   <tr key={lead.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
                           {lead.outdated && (
                             <span title="Dados desatualizados">
@@ -278,7 +278,7 @@ export const LeadTable = () => {
                     <td className="px-6 py-4 font-mono text-xs">
                       <div className="flex flex-col text-slate-500 dark:text-slate-400">
                         <span className="text-xs opacity-70">{lead.cpf}</span>
-                        <span className="font-bold text-slate-700 dark:text-slate-200">
+                        <span className="font-bold text-slate-700 dark:text-slate-100">
                           {formatDisplayPhone(lead.phone)}
                         </span>
                       </div>

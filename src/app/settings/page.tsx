@@ -63,11 +63,11 @@ export default function SettingsPage() {
             <ImageIcon size={20} className="text-emerald-500" /> Logo customizada
           </h3>
           <div className="flex flex-col gap-4">
-            <div className="w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+            <div className="w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950/50">
               {logoBase64 ? (
                 <img src={logoBase64} alt="Company Logo" className="max-h-full max-w-full object-contain p-2" />
               ) : (
-                <div className="text-slate-400 text-sm flex flex-col items-center gap-2">
+                <div className="text-slate-400 dark:text-slate-500 text-sm flex flex-col items-center gap-2">
                   <ImageIcon size={32} />
                   <span>Nenhuma logo definida</span>
                 </div>
@@ -103,8 +103,8 @@ export default function SettingsPage() {
         </div>
 
         {/* INFORMACOES */}
-        <div className="bg-slate-100 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-center">
-          <h3 className="font-bold text-slate-800 dark:text-white mb-2">Armazenamento Local</h3>
+        <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-center">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">Armazenamento Local</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
             Todas as configurações estão sendo salvas localmente no seu navegador para máxima performance. 
             No futuro, a vinculação em nuvem importará automaticamente estes registros.
@@ -121,7 +121,7 @@ export default function SettingsPage() {
               value={newBank}
               onChange={e => setNewBank(e.target.value)}
               placeholder="Nome do banco..."
-              className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 outline-none dark:text-white"
+              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white dark:placeholder-slate-500"
             />
             <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-all" disabled={!newBank.trim()}>
               <Plus size={20} />
@@ -130,8 +130,8 @@ export default function SettingsPage() {
 
           <div className="max-h-48 overflow-y-auto pr-2 space-y-2">
             {banks.map(bank => (
-              <div key={bank} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 p-2.5 rounded-lg group">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{bank}</span>
+              <div key={bank} className="flex items-center justify-between bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-700/50 p-2.5 rounded-lg group">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{bank}</span>
                 <button 
                   onClick={() => removeBank(bank)}
                   className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
@@ -154,7 +154,7 @@ export default function SettingsPage() {
               value={newOrigin}
               onChange={e => setNewOrigin(e.target.value)}
               placeholder="Tag de origem..."
-              className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 outline-none dark:text-white"
+              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white dark:placeholder-slate-500"
             />
             <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-all" disabled={!newOrigin.trim()}>
               <Plus size={20} />
@@ -163,8 +163,8 @@ export default function SettingsPage() {
 
           <div className="max-h-48 overflow-y-auto pr-2 space-y-2">
             {origins.map(origin => (
-              <div key={origin} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 p-2.5 rounded-lg group">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{origin}</span>
+              <div key={origin} className="flex items-center justify-between bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-700/50 p-2.5 rounded-lg group">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{origin}</span>
                 <button 
                   onClick={() => removeOrigin(origin)}
                   className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"

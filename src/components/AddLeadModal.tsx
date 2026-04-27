@@ -57,7 +57,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="glass-panel w-full max-w-md rounded-2xl shadow-xl overflow-hidden mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white">Novo Cliente</h2>
+          <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-slate-100">Novo Cliente</h2>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 cursor-pointer">
             <X size={20} />
           </button>
@@ -71,7 +71,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
               type="text" 
               value={name} 
               onChange={e => setName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
               placeholder="Ex: Maria da Silva"
             />
           </div>
@@ -84,7 +84,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 type="text" 
                 value={cpf} 
                 onChange={e => setCpf(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 placeholder="000.000.000-00"
               />
             </div>
@@ -106,7 +106,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                     setPhone(formatted);
                   }
                 }}
-                className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-lg px-4 py-2.5 outline-none focus:ring-2 transition-all text-slate-800 dark:text-white ${
+                className={`w-full bg-slate-50 dark:bg-slate-950 border rounded-lg px-4 py-2.5 outline-none focus:ring-2 transition-all text-slate-800 dark:text-slate-100 ${
                   phone && phone.replace(/\D/g, "").length < 10 
                     ? "border-red-500 focus:ring-red-500 shadow-sm shadow-red-100" 
                     : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
@@ -126,7 +126,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 required
                 value={origin} 
                 onChange={e => setOrigin(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
               >
                 <option value="" disabled>Selecione a origem</option>
                 {origins.map(o => (
@@ -143,7 +143,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 required
                 value={bank} 
                 onChange={e => setBank(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
               >
                 <option value="" disabled>Selecione</option>
                 {banks.map(b => (
@@ -160,7 +160,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 min="0"
                 value={value} 
                 onChange={e => setValue(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-white"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 placeholder="0.00"
               />
             </div>
