@@ -10,8 +10,12 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
-  title: "LKZap - CRM Saque Complementar",
-  description: "Mini CRM de alta performance para gestão de leads",
+  title: "LKZap CRM",
+  description: "CRM de Saque Complementar",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
