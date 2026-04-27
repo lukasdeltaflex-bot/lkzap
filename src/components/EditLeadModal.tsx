@@ -34,7 +34,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       setPhone(formatDisplayPhone(lead.phone));
       setBank(lead.bank);
       setOrigin(lead.origin || '');
-      setValue(formatCurrencyBRL(lead.availableValue.toString()));
+      setValue(formatCurrencyBRL(lead.availableValue));
       setStatus(lead.status);
       setQueue(lead.queue);
       setTemplateId(lead.selectedTemplateId || '');
