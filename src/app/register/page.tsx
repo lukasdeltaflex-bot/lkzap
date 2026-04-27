@@ -147,7 +147,7 @@ export default function RegisterPage() {
           setErrorMessage("Falha de conexão. Verifique sua internet.");
           break;
         default:
-          // Fallback para debug (mostra erro técnico se não for um dos mapeados)
+          console.error("Firebase register unhandled error:", { code: error.code, message: error.message });
           setErrorMessage(`Erro (${error.code || "unknown"}): ${error.message || "Erro inesperado. Tente novamente."}`);
       }
     } finally {

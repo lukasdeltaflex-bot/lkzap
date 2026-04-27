@@ -3,16 +3,25 @@ export const normalizeCPF = (cpf: string): string => {
 };
 
 export const normalizePhone = (phone: string): string => {
-  const digits = phone.replace(/\D/g, '');
+  let digits = phone.replace(/\D/g, '');
   if (!digits) return '';
   
-  // Se for maior que 11 e começar com 55, é possível que já esteja com o DDI
-  if (digits.startsWith('55') && digits.length >= 12) {
+  // Remove leading zeros if any (common mistake in Brazil)
+  while (digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+
+  // Se já começar com 55 e tiver tamanho de celular internacional (13 dígitos) ou fixo (12)
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
     return digits;
   }
   
-  // Fallback: Adiciona 55 se não tiver
-  return `55${digits}`;
+  // Se tiver 10 ou 11 dígitos, adiciona 55 (Brasil)
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+  
+  return digits;
 };
 
 export const formatPhone = (val: string): string => {

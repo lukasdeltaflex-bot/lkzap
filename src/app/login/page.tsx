@@ -42,6 +42,7 @@ export default function LoginPage() {
           setErrorMessage("Muitas tentativas. Tente novamente mais tarde.");
           break;
         default:
+          console.error("Firebase login unhandled error:", { code: error.code, message: error.message });
           setErrorMessage("Erro ao entrar. Tente novamente.");
       }
     } finally {

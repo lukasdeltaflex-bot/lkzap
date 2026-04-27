@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
-import { normalizeCPF, normalizePhone } from '../lib/utils';
+import { normalizeCPF, normalizePhone, isDuplicateLead } from '../lib/utils';
 import { Lead } from '../types';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const AddLeadModal = ({ isOpen, onClose }: Props) => {
-  const { addLead } = useLeadStore();
+  const { leads, addLead } = useLeadStore();
   const { banks, origins } = useSettingsStore();
 
   const [name, setName] = useState('');
@@ -29,6 +29,11 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
     e.preventDefault();
     const phoneDigits = phone.replace(/\D/g, "");
     if (!name || !cpf || phoneDigits.length < 10 || !bank || !value || !origin) return;
+
+    if (isDuplicateLead(leads, cpf, phone)) {
+      alert("Este cliente (CPF ou Telefone) já está cadastrado.");
+      return;
+    }
 
     addLead({
       name,
