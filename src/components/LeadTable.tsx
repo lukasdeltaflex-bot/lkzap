@@ -352,7 +352,7 @@ export const LeadTable = () => {
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
                 {columns.map((col, idx) => (
-                  <th key={col} className={`px-6 py-4 relative ${idx === 3 ? 'text-right' : ''}`}>
+                  <th key={col} className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${idx === 3 ? 'text-right' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span>{col}</span>
                       {idx < columns.length - 1 && (
@@ -366,7 +366,7 @@ export const LeadTable = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-16 text-center text-slate-500 border-r border-slate-200/30 dark:border-slate-700/40">
                     <div className="flex flex-col items-center gap-2">
                        <Filter size={40} className="text-slate-200 dark:text-slate-800" />
                        <p className="font-bold text-lg">Nenhum lead encontrado</p>
@@ -377,7 +377,7 @@ export const LeadTable = () => {
               ) : (
                 filteredLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all">
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
@@ -386,7 +386,7 @@ export const LeadTable = () => {
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{lead.origin || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-mono text-slate-400">{formatCPF(lead.cpf)}</span>
@@ -398,7 +398,7 @@ export const LeadTable = () => {
                         <span className="font-bold text-slate-700 dark:text-slate-200 text-xs mt-1">{formatDisplayPhone(lead.phone)}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
                           <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflow-hidden">
@@ -411,10 +411,10 @@ export const LeadTable = () => {
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10">
+                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       {formatCurrency(lead.availableValue)}
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col gap-1.5 min-w-[140px]">
                         <select 
                           value={lead.status}
@@ -433,7 +433,7 @@ export const LeadTable = () => {
                         <span className="text-[10px] font-bold text-slate-400 pl-1">{lead.queue}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10">
+                    <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="inline-flex flex-col items-start mr-3 align-middle">
                         <div className="mb-2">
                           <select 
