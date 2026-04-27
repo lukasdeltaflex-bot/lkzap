@@ -55,4 +55,5 @@ export interface Lead {
   lastAction: LeadAction;
   lastSendDate?: string | null; // ISO String
   outdated?: boolean;
+  selectedTemplateId?: string;
 }

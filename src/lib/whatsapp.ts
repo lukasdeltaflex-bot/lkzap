@@ -1,8 +1,8 @@
 import { Lead } from '../types';
-import { normalizePhone } from './utils';
+import { normalizePhone, formatCPF, formatDisplayPhone } from './utils';
 
 const formatMoney = (value: number) => {
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 const replaceVariables = (content: string, lead: Lead) => {
@@ -11,8 +11,8 @@ const replaceVariables = (content: string, lead: Lead) => {
     .replace(/{valor}/g, formatMoney(lead.availableValue))
     .replace(/{banco}/g, lead.bank)
     .replace(/{origem}/g, lead.origin || '')
-    .replace(/{telefone}/g, lead.phone)
-    .replace(/{cpf}/g, lead.cpf);
+    .replace(/{telefone}/g, formatDisplayPhone(lead.phone))
+    .replace(/{cpf}/g, formatCPF(lead.cpf));
 };
 
 export const generateWhatsAppLink = (lead: Lead, templateContent: string): string => {
