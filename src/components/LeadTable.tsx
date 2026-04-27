@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { generateWhatsAppLink, generateReabordagemLink } from '../lib/whatsapp';
 import { exportToExcel, exportToPDF } from '../lib/export';
 import { Lead } from '../types';
-import { formatDisplayPhone } from '../lib/utils';
+import { formatDisplayPhone, formatCPF } from '../lib/utils';
 import { 
   MessageCircle, 
   RefreshCw, 
@@ -277,7 +277,7 @@ export const LeadTable = () => {
                     </td>
                     <td className="px-6 py-4 font-mono text-xs">
                       <div className="flex flex-col text-slate-500 dark:text-slate-400">
-                        <span className="text-xs opacity-70">{lead.cpf}</span>
+                        <span className="text-xs opacity-70">{formatCPF(lead.cpf)}</span>
                         <span className="font-bold text-slate-700 dark:text-slate-100">
                           {formatDisplayPhone(lead.phone)}
                         </span>

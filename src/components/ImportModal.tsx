@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { useLeadStore } from "../store/useLeadStore";
-import { isDuplicateLead, normalizeCPF, normalizePhone } from "../lib/utils";
+import { isDuplicateLead, normalizeCPF, normalizePhone, validateCPF, parseCurrencyBRL, formatCurrencyBRL, formatCPF, formatDisplayPhone } from "../lib/utils";
 import { X, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Lead } from "../types";
 
@@ -121,6 +121,9 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
           if (!name || !normalizedCpf || !normalizedPhone) {
             isValid = false;
             error = 'Campos obrigatórios faltando';
+          } else if (!validateCPF(normalizedCpf)) {
+            isValid = false;
+            error = 'CPF Inválido';
           } else if (isDuplicateLead(leads, normalizedCpf, normalizedPhone)) {
             isValid = false;
             error = 'Duplicado na Base';
@@ -262,10 +265,10 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
                       <tr key={row.originalIndex} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                         <td className="px-4 py-2 text-slate-400">{row.originalIndex}</td>
                         <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{row.name}</td>
-                        <td className="px-4 py-2">{row.cpf}</td>
-                        <td className="px-4 py-2">{row.phone}</td>
+                        <td className="px-4 py-2 font-mono text-xs">{formatCPF(row.cpf)}</td>
+                        <td className="px-4 py-2 font-mono text-xs">{formatDisplayPhone(row.phone)}</td>
                         <td className="px-4 py-2">{row.bank}</td>
-                        <td className="px-4 py-2">R$ {row.value.toFixed(2)}</td>
+                        <td className="px-4 py-2">{formatCurrencyBRL(row.value)}</td>
                         <td className="px-4 py-2 flex justify-center">
                           {row.isValid ? (
                             <span className="text-emerald-500 flex items-center justify-center" title="Valid"><CheckCircle2 size={18}/></span>

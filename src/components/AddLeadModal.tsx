@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
-import { normalizeCPF, normalizePhone, isDuplicateLead } from '../lib/utils';
+import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatCurrencyBRL, parseCurrencyBRL } from '../lib/utils';
 import { Lead } from '../types';
 
 interface Props {
@@ -22,6 +22,10 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
   const [bank, setBank] = useState<string>(banks.length > 0 ? banks[0] : '');
   const [origin, setOrigin] = useState<string>(origins.length > 0 ? origins[0] : '');
   const [value, setValue] = useState('');
+
+  const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
+  const isValueValid = value === '' || parseCurrencyBRL(value) > 0;
+  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseCurrencyBRL(value) > 0 && bank && origin;
 
   if (!isOpen) return null;
 
@@ -41,7 +45,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
       phone: normalizePhone(phone),
       bank,
       origin,
-      availableValue: Number(value),
+      availableValue: parseCurrencyBRL(value),
       consultDate: new Date().toISOString(),
       status: 'Com limite',
       queue: 'Pronto para enviar',
@@ -88,10 +92,15 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
                 required
                 type="text" 
                 value={cpf} 
-                onChange={e => setCpf(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                onChange={e => setCpf(formatCPF(e.target.value))}
+                className={`w-full bg-slate-50 dark:bg-slate-950 border rounded-lg px-4 py-2.5 outline-none focus:ring-2 transition-all text-slate-800 dark:text-slate-100 ${
+                  !isCPFValid 
+                    ? "border-red-500 focus:ring-red-500" 
+                    : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
+                }`}
                 placeholder="000.000.000-00"
               />
+              {!isCPFValid && <p className="text-red-500 text-[10px] mt-1 font-medium">CPF inválido</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">WhatsApp</label>
@@ -160,14 +169,17 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor Disp. (R$)</label>
               <input 
                 required
-                type="number" 
-                step="0.01"
-                min="0"
+                type="text" 
                 value={value} 
-                onChange={e => setValue(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
-                placeholder="0.00"
+                onChange={e => setValue(formatCurrencyBRL(e.target.value))}
+                className={`w-full bg-slate-50 dark:bg-slate-950 border rounded-lg px-4 py-2.5 outline-none focus:ring-2 transition-all text-slate-800 dark:text-slate-100 ${
+                  !isValueValid 
+                    ? "border-red-500 focus:ring-red-500" 
+                    : "border-slate-300 dark:border-slate-700 focus:ring-emerald-500"
+                }`}
+                placeholder="R$ 0,00"
               />
+              {!isValueValid && <p className="text-red-500 text-[10px] mt-1 font-medium">Informe um valor válido</p>}
             </div>
           </div>
 
@@ -181,7 +193,12 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
             </button>
             <button 
               type="submit" 
-              className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors shadow-md"
+              disabled={!canSubmit}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors shadow-md ${
+                canSubmit 
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                  : "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed"
+              }`}
             >
               Cadastrar Lead
             </button>
