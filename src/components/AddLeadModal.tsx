@@ -55,7 +55,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
+      <div className="glass-panel w-full max-w-md rounded-2xl shadow-xl overflow-hidden mt-[env(safe-area-inset-top)] mb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white">Novo Cliente</h2>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 cursor-pointer">

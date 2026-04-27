@@ -198,7 +198,7 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-[85vh]">
+      <div className="glass-panel w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden flex flex-col h-[85vh]">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white">Importar Lista de Leads</h2>
           <button onClick={handleClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500">
@@ -282,7 +282,7 @@ export const ImportModal = ({ isOpen, onClose }: Props) => {
           )}
         </div>
 
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/50">
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-900/10">
           <button 
             onClick={handleClose}
             className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

@@ -31,13 +31,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Initial mount cycle: return blank shell to match SSR
   if (!mounted) {
-    return <div className="min-h-screen bg-slate-50 dark:bg-slate-900" />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-background" />;
   }
 
   // Firebase is still checking the token
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-background flex items-center justify-center">
         <Loader2 className="animate-spin text-emerald-500" size={40} />
       </div>
     );

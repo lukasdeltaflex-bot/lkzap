@@ -130,7 +130,7 @@ export const LeadTable = () => {
   return (
     <div className="flex flex-col gap-4">
       {/* Search and Advanced Filters */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col gap-4">
+      <div className="glass-panel p-4 rounded-xl flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -238,7 +238,7 @@ export const LeadTable = () => {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="glass-panel rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800/50">

@@ -48,7 +48,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
-        <Link href="/" className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors">
+        <Link href="/" className="p-2 glass-panel rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
           <ArrowLeft size={20} className="text-slate-600 dark:text-slate-300" />
         </Link>
         <h2 className="text-2xl font-bold font-outfit text-slate-800 dark:text-white">
@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* LOGO */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="glass-panel p-6 rounded-2xl">
           <h3 className="text-lg font-bold font-outfit mb-4 flex items-center gap-2 text-slate-800 dark:text-white">
             <ImageIcon size={20} className="text-emerald-500" /> Logo customizada
           </h3>
@@ -103,7 +103,7 @@ export default function SettingsPage() {
         </div>
 
         {/* INFORMACOES */}
-        <div className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+        <div className="bg-slate-100 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-center">
           <h3 className="font-bold text-slate-800 dark:text-white mb-2">Armazenamento Local</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
             Todas as configurações estão sendo salvas localmente no seu navegador para máxima performance. 
@@ -112,7 +112,7 @@ export default function SettingsPage() {
         </div>
 
         {/* BANCOS */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="glass-panel p-6 rounded-2xl">
           <h3 className="text-lg font-bold font-outfit mb-4 text-slate-800 dark:text-white">Bancos Aceitos</h3>
           
           <form onSubmit={handleBankAdd} className="flex gap-2 mb-4">
@@ -145,7 +145,7 @@ export default function SettingsPage() {
         </div>
 
         {/* ORIGENS */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="glass-panel p-6 rounded-2xl">
           <h3 className="text-lg font-bold font-outfit mb-4 text-slate-800 dark:text-white">Origens de Lead</h3>
           
           <form onSubmit={handleOriginAdd} className="flex gap-2 mb-4">

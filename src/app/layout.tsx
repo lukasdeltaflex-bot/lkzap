@@ -21,8 +21,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${outfit.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <body className="min-h-full flex flex-col font-sans transition-colors">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true}>
           <AuthProvider>
             <AuthGuard>
               <Header />

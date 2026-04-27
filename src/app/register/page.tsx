@@ -155,11 +155,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-background p-4 relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl opacity-50 pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl opacity-50 pointer-events-none" />
 
-      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-xl w-full max-w-md relative z-10 border border-slate-200 dark:border-slate-700">
+      <div className="glass-panel p-8 rounded-2xl shadow-xl w-full max-w-md relative z-10">
         <div className="mb-6">
           <Link href="/login" className="text-slate-500 hover:text-emerald-600 flex items-center gap-1 text-sm font-medium transition-colors mb-4">
             <ArrowLeft size={16} /> Voltar para o Login
