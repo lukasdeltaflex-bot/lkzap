@@ -18,7 +18,9 @@ import {
   FileSpreadsheet,
   FileText,
   Edit2,
-  Trash2
+  Trash2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ImportModal } from './ImportModal';
@@ -37,6 +39,7 @@ export const LeadTable = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
 
   const getBankInfo = (bankName: string) => {
     return banks.find(b => (typeof b === 'string' ? b : b.name) === bankName);
@@ -125,6 +128,12 @@ export const LeadTable = () => {
     }
   };
 
+  const handleCopyCPF = (cpf: string) => {
+    navigator.clipboard.writeText(formatCPF(cpf));
+    setCopiedCpf(cpf);
+    setTimeout(() => setCopiedCpf(null), 2000);
+  };
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
@@ -158,13 +167,13 @@ export const LeadTable = () => {
               placeholder="Buscar por nome, CPF ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:placeholder-slate-500 transition-all font-medium"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text[...]"
             />
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg font-semibold border border-emerald-100 dark:border-emerald-800 hover:bg-emerald-100 transition-colors whitespace-nowrap"
+              className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg font-semibold border border-emerald-100 dark:bord[...]"
             >
               <UploadIcon size={18} />
               <span className="hidden sm:inline">Importar</span>
@@ -243,12 +252,12 @@ export const LeadTable = () => {
 
       <div className="flex items-center justify-between px-1">
         <div className="text-sm text-slate-500 font-medium italic">
-          Exibindo <span className="text-emerald-600 dark:text-emerald-400 font-bold not-italic">{filteredLeads.length}</span> de <span className="font-bold not-italic">{leads.length}</span> leads
+          Exibindo <span className="text-emerald-600 dark:text-emerald-400 font-bold not-italic">{filteredLeads.length}</span> de <span className="font-bold not-italic">{leads.length}</span> lead[...]
         </div>
         <button 
           onClick={handleNextClient}
           disabled={isCooldownActive}
-          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-bold transition-all shadow-md active:scale-95 text-sm"
+          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 disabled:cu[...]"
         >
           {isCooldownActive ? `Dispensa: ${cooldownSeconds}s` : 'Chamar Próximo'}
           <ChevronRight size={18} />
@@ -293,18 +302,30 @@ export const LeadTable = () => {
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex flex-col">
-                        <span className="text-xs font-mono text-slate-400 mb-0.5">{formatCPF(lead.cpf)}</span>
-                        <span className="font-bold text-slate-700 dark:text-slate-200">{formatDisplayPhone(lead.phone)}</span>
+                        <button 
+                          onClick={() => handleCopyCPF(lead.cpf)}
+                          className="flex items-center gap-1 text-[11px] font-mono text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors mb-0.5 w-fit"
+                          title="Copiar CPF"
+                        >
+                          {formatCPF(lead.cpf)}
+                          {copiedCpf === lead.cpf ? (
+                            <Check size={12} className="text-emerald-500" />
+                          ) : (
+                            <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
+                        </button>
+                        <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">{formatDisplayPhone(lead.phone)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
-                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflow-hidden shadow-[0_0_4px_rgba(0,0,0,0.12)]">
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflo[...]">
                             <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-full h-full object-contain p-1" />
                           </div>
                         ) : (
-                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200 dark:border-slate-700 shadow-[0_0_4px_rgba(0,0,0,0.08)]">{lead.bank.slice(0, 2).toUpperCase()}</div>
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-sla[...]">
+                          </div>
                         )}
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
                       </div>
@@ -337,7 +358,7 @@ export const LeadTable = () => {
                         <select 
                           value={lead.selectedTemplateId || (messageTemplates.find(t => t.isDefault)?.id || '')}
                           onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
-                          className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px]"
+                          className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w[...]"
                         >
                           <option value="">Padrão</option>
                           {messageTemplates.map(tmpl => (
@@ -347,9 +368,9 @@ export const LeadTable = () => {
                       </div>
                       
                       <div className="inline-flex gap-1">
-                        <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-90 transition-all"><MessageCircle size={18} /></button>
-                        <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all active:scale-90"><Edit2 size={18} /></button>
-                        <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all active:scale-90"><Trash2 size={18} /></button>
+                        <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scal[...]" />
+                        <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all active:[...]" />
+                        <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all active:sca[...]" />
                       </div>
                     </td>
                   </tr>
