@@ -26,6 +26,11 @@ interface SettingsStore {
   removeTemplate: (id: string) => void;
   setDefaultTemplate: (id: string) => void;
   
+  reorderBanks: (banks: Bank[]) => void;
+  reorderOrigins: (origins: string[]) => void;
+  reorderTabulations: (tabulations: Tabulation[]) => void;
+  reorderTemplates: (templates: MessageTemplate[]) => void;
+  
   setLogo: (base64: string | null) => void;
 }
 
@@ -119,6 +124,11 @@ export const useSettingsStore = create<SettingsStore>()(
           isDefault: t.id === id
         }))
       })),
+
+      reorderBanks: (banks) => set({ banks }),
+      reorderOrigins: (origins) => set({ origins }),
+      reorderTabulations: (tabulations) => set({ tabulations }),
+      reorderTemplates: (messageTemplates) => set({ messageTemplates }),
 
       setLogo: (base64) => set({ logoBase64: base64 })
     }),
