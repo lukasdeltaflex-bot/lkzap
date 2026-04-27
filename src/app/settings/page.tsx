@@ -16,7 +16,8 @@ import {
   ArrowLeft,
   ChevronRight,
   Star,
-  GripVertical
+  GripVertical,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -71,21 +72,26 @@ export default function SettingsPage() {
     origins, addOrigin, removeOrigin, reorderOrigins,
     tabulations, addTabulation, updateTabulation, removeTabulation, reorderTabulations,
     messageTemplates, addTemplate, updateTemplate, removeTemplate, setDefaultTemplate, reorderTemplates,
+    leadStatuses, addLeadStatus, updateLeadStatus, removeLeadStatus, reorderLeadStatuses,
     logoBase64, setLogo 
   } = useSettingsStore();
 
   // Navigation state
-  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status'>('geral');
   
   // Local form states
   const [newBank, setNewBank] = useState("");
   const [newOrigin, setNewOrigin] = useState("");
   const [newTab, setNewTab] = useState("");
+  const [newStatus, setNewStatus] = useState({ name: "", color: "#10b981" });
   
   // Edit states
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabText, setEditingTabText] = useState("");
   
+  const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
+  const [editingStatusData, setEditingStatusData] = useState({ name: "", color: "" });
+
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [isAddingTemplate, setIsAddingTemplate] = useState(false);
   
@@ -138,7 +144,15 @@ export default function SettingsPage() {
     setIsAddingTemplate(true);
   };
 
-  const handleDragEnd = (event: DragEndEvent, type: 'banks' | 'origins' | 'tabulations' | 'templates') => {
+  const handleStatusAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newStatus.name.trim()) {
+      addLeadStatus(newStatus.name.trim(), newStatus.color);
+      setNewStatus({ name: "", color: "#10b981" });
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent, type: 'banks' | 'origins' | 'tabulations' | 'templates' | 'status') => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -154,6 +168,10 @@ export default function SettingsPage() {
       const oldIndex = banks.findIndex(b => b.id === active.id);
       const newIndex = banks.findIndex(b => b.id === over.id);
       reorderBanks(arrayMove(banks, oldIndex, newIndex));
+    } else if (type === 'status') {
+      const oldIndex = leadStatuses.findIndex(s => s.id === active.id);
+      const newIndex = leadStatuses.findIndex(s => s.id === over.id);
+      reorderLeadStatuses(arrayMove(leadStatuses, oldIndex, newIndex));
     }
   };
 
@@ -174,7 +192,8 @@ export default function SettingsPage() {
           {[
             { id: 'geral', label: 'Gerais', icon: ImageIcon },
             { id: 'bancos', label: 'Bancos', icon: Building2 },
-            { id: 'mensagens', label: 'Mensagens', icon: MessageSquare }
+            { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
+            { id: 'status', label: 'Status Leads', icon: Activity }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -212,7 +231,7 @@ export default function SettingsPage() {
                         }
                       }} />
                       <div className="flex gap-2">
-                        <button onClick={() => fileInputRef.current?.click()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"><Upload size={16} /> Mudar Logo</button>
+                        <button onClick={() => fileInputRef.current?.click()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"><Upload size={16} /> Mudar Logo</button>
                         {logoBase64 && <button onClick={() => setLogo(null)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 px-3 py-2 rounded-lg text-sm font-medium">Remover</button>}
                       </div>
                     </div>
@@ -281,7 +300,6 @@ export default function SettingsPage() {
 
           {activeTab === 'mensagens' && (
             <div className="flex flex-col gap-8">
-              {/* --- Tabulações Reorderable --- */}
               <div className="glass-panel p-6 rounded-2xl">
                 <h3 className="text-lg font-bold font-outfit mb-4 text-slate-800 dark:text-white flex items-center gap-2"><Tags size={20} className="text-emerald-500" /> Tabulações</h3>
                 <form onSubmit={(e) => { e.preventDefault(); if (newTab.trim()) { addTabulation(newTab.trim()); setNewTab(""); } }} className="flex gap-2 mb-6">
@@ -315,7 +333,6 @@ export default function SettingsPage() {
                 </DndContext>
               </div>
 
-              {/* --- Modelos Progressivos --- */}
               <div className="glass-panel p-6 rounded-2xl">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white flex items-center gap-2"><MessageSquare size={20} className="text-emerald-500" /> Modelos</h3>
@@ -392,6 +409,61 @@ export default function SettingsPage() {
                   </SortableContext>
                 </DndContext>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'status' && (
+            <div className="glass-panel p-6 rounded-2xl animate-in fade-in duration-300">
+               <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white flex items-center gap-2"><Activity size={20} className="text-emerald-500" /> Status dos Leads</h3>
+              </div>
+
+              <form onSubmit={handleStatusAdd} className="flex gap-3 mb-8 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex-1 flex flex-col gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase px-1">Nome do Status</label>
+                  <input required type="text" value={newStatus.name} onChange={e => setNewStatus({...newStatus, name: e.target.value})} placeholder="Ex: Lead Quente" className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm" />
+                </div>
+                <div className="flex flex-col gap-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase px-1">Cor</label>
+                   <input type="color" value={newStatus.color} onChange={e => setNewStatus({...newStatus, color: e.target.value})} className="h-9 w-16 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg p-1 cursor-pointer" />
+                </div>
+                <div className="flex items-end">
+                   <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 px-6 rounded-lg transition-all active:scale-95 shadow-md">Criar</button>
+                </div>
+              </form>
+
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'status')}>
+                <SortableContext items={leadStatuses} strategy={verticalListSortingStrategy}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {leadStatuses.map(status => (
+                      <SortableItem key={status.id} id={status.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl group hover:shadow-md transition-all">
+                        {editingStatusId === status.id ? (
+                          <div className="flex-1 flex items-center gap-2">
+                             <input autoFocus value={editingStatusData.name} onChange={e => setEditingStatusData({...editingStatusData, name: e.target.value})} className="flex-1 bg-white dark:bg-slate-800 border-none px-2 py-1 text-sm font-bold rounded" onKeyDown={e => { if(e.key==='Enter') { updateLeadStatus(status.id, editingStatusData); setEditingStatusId(null); } }} />
+                             <input type="color" value={editingStatusData.color} onChange={e => setEditingStatusData({...editingStatusData, color: e.target.value})} className="w-8 h-8 rounded border-none cursor-pointer" />
+                             <button onClick={() => { updateLeadStatus(status.id, editingStatusData); setEditingStatusId(null); }} className="text-emerald-500"><Check size={18}/></button>
+                             <button onClick={() => setEditingStatusId(null)} className="text-slate-400"><X size={18}/></button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }}></div>
+                            <div className="flex-1">
+                              <span className={`text-sm font-bold ${status.active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 line-through'}`}>{status.name}</span>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <button onClick={() => updateLeadStatus(status.id, { active: !status.active })} className={`p-1 ${status.active ? 'text-emerald-500' : 'text-slate-400'} hover:scale-110 transition-transform`}>
+                                  <Check size={16} />
+                               </button>
+                               <button onClick={() => { setEditingStatusId(status.id); setEditingStatusData({name: status.name, color: status.color}); }} className="p-1 text-slate-400 hover:text-blue-500"><Edit2 size={16}/></button>
+                               <button onClick={() => { if(confirm(`Excluir status "${status.name}"?`)) removeLeadStatus(status.id) }} className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                            </div>
+                          </>
+                        )}
+                      </SortableItem>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           )}
         </div>

@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Bank, MessageTemplate, Tabulation } from '../types';
+import { Bank, MessageTemplate, Tabulation, LeadStatusConfig } from '../types';
 
 interface SettingsStore {
   banks: Bank[];
   origins: string[];
   tabulations: Tabulation[];
   messageTemplates: MessageTemplate[];
+  leadStatuses: LeadStatusConfig[];
   logoBase64: string | null;
   
   // Actions
@@ -25,6 +26,11 @@ interface SettingsStore {
   updateTemplate: (id: string, data: Partial<MessageTemplate>) => void;
   removeTemplate: (id: string) => void;
   setDefaultTemplate: (id: string) => void;
+  
+  addLeadStatus: (name: string, color: string) => void;
+  updateLeadStatus: (id: string, data: Partial<LeadStatusConfig>) => void;
+  removeLeadStatus: (id: string) => void;
+  reorderLeadStatuses: (statuses: LeadStatusConfig[]) => void;
   
   reorderBanks: (banks: Bank[]) => void;
   reorderOrigins: (origins: string[]) => void;
@@ -63,6 +69,21 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
   }
 ];
 
+const DEFAULT_STATUSES: LeadStatusConfig[] = [
+  { id: 'st-1', name: 'Novo', color: '#94a3b8', active: true },
+  { id: 'st-2', name: 'Consultado', color: '#64748b', active: true },
+  { id: 'st-3', name: 'Com limite', color: '#10b981', active: true },
+  { id: 'st-4', name: 'Sem limite', color: '#ef4444', active: true },
+  { id: 'st-5', name: 'Mensagem enviada', color: '#0ea5e9', active: true },
+  { id: 'st-6', name: 'Fechado', color: '#059669', active: true },
+  { id: 'st-7', name: 'Descartado', color: '#7f1d1d', active: true },
+  { id: 'st-8', name: 'Não respondeu', color: '#eab308', active: true },
+  { id: 'st-9', name: 'Não quer', color: '#dc2626', active: true },
+  { id: 'st-10', name: 'Falecido', color: '#4b5563', active: true },
+  { id: 'st-11', name: 'Número inválido', color: '#f97316', active: true },
+  { id: 'st-12', name: 'Reabordar depois', color: '#8b5cf6', active: true },
+];
+
 const DEFAULT_ORIGINS = ['URA Reversa', 'Lista própria', 'Arquivo TXT', 'Excel', 'Indicação', 'Outro'];
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -72,6 +93,7 @@ export const useSettingsStore = create<SettingsStore>()(
       origins: DEFAULT_ORIGINS,
       tabulations: DEFAULT_TABULATIONS,
       messageTemplates: DEFAULT_TEMPLATES,
+      leadStatuses: DEFAULT_STATUSES,
       logoBase64: null,
 
       addBank: (name, logo) => set((state) => ({
@@ -125,6 +147,17 @@ export const useSettingsStore = create<SettingsStore>()(
         }))
       })),
 
+      addLeadStatus: (name, color) => set((state) => ({
+        leadStatuses: [...state.leadStatuses, { id: crypto.randomUUID(), name, color, active: true }]
+      })),
+      updateLeadStatus: (id, data) => set((state) => ({
+        leadStatuses: state.leadStatuses.map(s => s.id === id ? { ...s, ...data } : s)
+      })),
+      removeLeadStatus: (id) => set((state) => ({
+        leadStatuses: state.leadStatuses.filter(s => s.id !== id)
+      })),
+      reorderLeadStatuses: (statuses) => set({ leadStatuses: statuses }),
+
       reorderBanks: (banks) => set({ banks }),
       reorderOrigins: (origins) => set({ origins }),
       reorderTabulations: (tabulations) => set({ tabulations }),
@@ -147,6 +180,9 @@ export const useSettingsStore = create<SettingsStore>()(
           }
           if (!persistedState.tabulations) persistedState.tabulations = DEFAULT_TABULATIONS;
           if (!persistedState.messageTemplates) persistedState.messageTemplates = DEFAULT_TEMPLATES;
+        }
+        if (!persistedState.leadStatuses) {
+          persistedState.leadStatuses = DEFAULT_STATUSES;
         }
         return persistedState;
       }

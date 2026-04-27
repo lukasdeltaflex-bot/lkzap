@@ -1,11 +1,11 @@
-export type LeadStatus =
-  | 'Novo'
-  | 'Consultado'
-  | 'Com limite'
-  | 'Sem limite'
-  | 'Mensagem enviada'
-  | 'Fechado'
-  | 'Descartado';
+export type LeadStatus = string;
+
+export interface LeadStatusConfig {
+  id: string;
+  name: string;
+  color: string;
+  active: boolean;
+}
 
 export type LeadQueue =
   | 'Pronto para enviar'

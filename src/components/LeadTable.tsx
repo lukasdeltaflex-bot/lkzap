@@ -9,12 +9,10 @@ import { Lead } from '../types';
 import { formatDisplayPhone, formatCPF } from '../lib/utils';
 import { 
   MessageCircle, 
-  RefreshCw, 
   ChevronRight, 
   AlertCircle, 
   Search, 
   Filter, 
-  Download, 
   Upload as UploadIcon, 
   XCircle,
   FileSpreadsheet,
@@ -28,7 +26,7 @@ import { EditLeadModal } from './EditLeadModal';
 
 export const LeadTable = () => {
   const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter } = useLeadStore();
-  const { banks, origins, messageTemplates, tabulations } = useSettingsStore();
+  const { banks, origins, messageTemplates, leadStatuses } = useSettingsStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBank, setFilterBank] = useState('');
@@ -42,6 +40,11 @@ export const LeadTable = () => {
 
   const getBankInfo = (bankName: string) => {
     return banks.find(b => (typeof b === 'string' ? b : b.name) === bankName);
+  };
+
+  const getStatusColor = (statusName: string) => {
+    const status = leadStatuses.find(s => s.name === statusName);
+    return status?.color || '#94a3b8';
   };
 
   useEffect(() => {
@@ -191,14 +194,8 @@ export const LeadTable = () => {
             onChange={(e) => setFilterStatus(e.target.value)}
             className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
-            <option value="">Filtro Status</option>
-            <option value="Novo">Novo</option>
-            <option value="Consultado">Consultado</option>
-            <option value="Com limite">Com limite</option>
-            <option value="Sem limite">Sem limite</option>
-            <option value="Mensagem enviada">Mensagem enviada</option>
-            <option value="Fechado">Fechado</option>
-            <option value="Descartado">Descartado</option>
+            <option value="">Status (Todos)</option>
+            {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
           </select>
 
           <select 
@@ -206,7 +203,7 @@ export const LeadTable = () => {
             onChange={(e) => setFilterQueue(e.target.value)}
             className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
           >
-            <option value="">Filtro Fila</option>
+            <option value="">Fila (Todas)</option>
             <option value="Pronto para enviar">Pronto para enviar</option>
             <option value="Aguardando">Aguardando</option>
             <option value="Frio">Frio</option>
@@ -264,11 +261,11 @@ export const LeadTable = () => {
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4">Nome / Origem</th>
-                <th className="px-6 py-4">CPF / WhatsApp</th>
-                <th className="px-6 py-4">Banco</th>
-                <th className="px-6 py-4 text-right">Valor</th>
-                <th className="px-6 py-4">Status / Fila</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">WhatsApp</th>
+                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">Banco</th>
+                <th className="px-6 py-4 text-right border-l border-slate-100 dark:border-slate-800/50">Valor</th>
+                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">Status / Fila</th>
+                <th className="px-6 py-4 text-right border-l border-slate-100 dark:border-slate-800/50">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -278,7 +275,6 @@ export const LeadTable = () => {
                     <div className="flex flex-col items-center gap-2">
                        <Filter size={40} className="text-slate-200 dark:text-slate-800" />
                        <p className="font-bold text-lg">Nenhum lead encontrado</p>
-                       <p className="text-sm opacity-60">Tente mudar os filtros ou fazer uma nova busca.</p>
                        <button onClick={clearFilters} className="mt-2 text-emerald-500 font-bold text-xs hover:underline">Limpar tudo</button>
                     </div>
                   </td>
@@ -290,51 +286,52 @@ export const LeadTable = () => {
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                           {lead.name}
-                          {lead.outdated && (
-                            <span title="Dados desatualizados">
-                              <AlertCircle size={14} className="text-red-500" />
-                            </span>
-                          )}
+                          {lead.outdated && <span title="Dados desatualizados"><AlertCircle size={14} className="text-red-500" /></span>}
                         </span>
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{lead.origin || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex flex-col">
                         <span className="text-xs font-mono text-slate-400 mb-0.5">{formatCPF(lead.cpf)}</span>
-                        <span className="font-bold text-slate-700 dark:text-slate-200">
-                          {formatDisplayPhone(lead.phone)}
-                        </span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{formatDisplayPhone(lead.phone)}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
-                          <div className="w-8 h-8 rounded-full bg-white border border-slate-100 p-1 flex items-center justify-center overflow-hidden shadow-sm">
+                          <div className="w-8 h-8 rounded-full bg-white border border-slate-100 p-1 flex items-center justify-center shadow-sm">
                             <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-full h-full object-contain" />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200 dark:border-slate-700">
-                            {lead.bank.slice(0, 2).toUpperCase()}
-                          </div>
+                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200 dark:border-slate-700">{lead.bank.slice(0, 2).toUpperCase()}</div>
                         )}
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          {lead.bank}
-                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base">
+                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10">
                       {formatCurrency(lead.availableValue)}
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black px-2 py-0.5 rounded leading-none w-fit inline-block">
-                          {lead.status.toUpperCase()}
-                        </span>
+                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
+                      <div className="flex flex-col gap-1.5 min-w-[140px]">
+                        <select 
+                          value={lead.status}
+                          onChange={(e) => updateLead(lead.id, { status: e.target.value })}
+                          className="text-[10px] font-black px-2 py-1 rounded outline-none border-none cursor-pointer transition-colors shadow-sm"
+                          style={{ 
+                            backgroundColor: getStatusColor(lead.status) + '20', 
+                            color: getStatusColor(lead.status),
+                            borderLeft: `3px solid ${getStatusColor(lead.status)}`
+                          }}
+                        >
+                          {leadStatuses.map(s => (
+                            <option key={s.id} value={s.name} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">{s.name}</option>
+                          ))}
+                        </select>
                         <span className="text-[10px] font-bold text-slate-400 pl-1">{lead.queue}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right space-x-1 whitespace-nowrap">
+                    <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10">
                       <div className="inline-flex flex-col items-start mr-3 align-middle group/sel">
                         <span className="text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1 group-hover/sel:text-emerald-500 transition-colors">Mensagem</span>
                         <select 
@@ -344,36 +341,15 @@ export const LeadTable = () => {
                         >
                           <option value="">Padrão</option>
                           {messageTemplates.map(tmpl => (
-                            <option key={tmpl.id} value={tmpl.id}>
-                              {tmpl.name}
-                            </option>
+                            <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
                           ))}
                         </select>
                       </div>
                       
-                      <div className="inline-flex gap-1 pt-3">
-                        <button
-                          onClick={() => handleSendWhatsApp(lead)}
-                          disabled={isCooldownActive}
-                          className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-30 transition-all shadow-sm active:scale-90"
-                          title="WhatsApp"
-                        >
-                          <MessageCircle size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(lead)}
-                          className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all active:scale-90"
-                          title="Editar Lead"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(lead)}
-                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all active:scale-90"
-                          title="Excluir Lead"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                      <div className="inline-flex gap-1">
+                        <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-90 transition-all"><MessageCircle size={18} /></button>
+                        <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all active:scale-90"><Edit2 size={18} /></button>
+                        <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all active:scale-90"><Trash2 size={18} /></button>
                       </div>
                     </td>
                   </tr>
@@ -384,16 +360,8 @@ export const LeadTable = () => {
         </div>
       </div>
 
-      <ImportModal 
-        isOpen={isImportModalOpen} 
-        onClose={() => setIsImportModalOpen(false)} 
-      />
-
-      <EditLeadModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        lead={currentLead}
-      />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+      <EditLeadModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} lead={currentLead} />
     </div>
   );
 };
