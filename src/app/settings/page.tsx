@@ -271,9 +271,10 @@ export default function SettingsPage() {
                       <SortableItem key={bank.id} id={bank.id} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl group transition-all hover:bg-white dark:hover:bg-slate-900 shadow-sm relative">
                         <div 
                           onClick={() => { setCurrentBankId(bank.id); bankLogoInputRef.current?.click(); }}
-                          className="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden cursor-pointer hover:border-emerald-500 transition-colors bg-white dark:bg-slate-800"
+                          className="w-12 h-12 min-w-[48px] rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden cursor-pointer hover:border-emerald-500 transition-colors bg-white dark:bg-slate-800 shadow-[0_0_4px_rgba(0,0,0,0.1)]"
+                          title="Upload Logo"
                         >
-                          {bank.logo ? <img src={bank.logo} alt={bank.name} className="w-full h-full object-contain p-1" /> : <Building2 size={20} className="text-slate-400" />}
+                          {bank.logo ? <img src={bank.logo} alt={bank.name} className="w-full h-full object-contain p-1.5" /> : <Building2 size={20} className="text-slate-400" />}
                         </div>
                         <div className="flex-1">
                           <span className="font-bold text-slate-800 dark:text-slate-100">{bank.name}</span>

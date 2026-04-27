@@ -300,11 +300,11 @@ export const LeadTable = () => {
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
-                          <div className="w-8 h-8 rounded-full bg-white border border-slate-100 p-1 flex items-center justify-center shadow-sm">
-                            <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-full h-full object-contain" />
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflow-hidden shadow-[0_0_4px_rgba(0,0,0,0.12)]">
+                            <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-full h-full object-contain p-1" />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200 dark:border-slate-700">{lead.bank.slice(0, 2).toUpperCase()}</div>
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200 dark:border-slate-700 shadow-[0_0_4px_rgba(0,0,0,0.08)]">{lead.bank.slice(0, 2).toUpperCase()}</div>
                         )}
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
                       </div>
