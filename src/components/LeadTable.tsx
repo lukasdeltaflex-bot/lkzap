@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { generateWhatsAppLink, generateReabordagemLink } from '../lib/whatsapp';
 import { exportToExcel, exportToPDF } from '../lib/export';
 import { Lead } from '../types';
-import { formatDisplayPhone, formatCPF } from '../lib/utils';
+import { formatDisplayPhone, formatCPF, normalizePhone } from '../lib/utils';
 import { 
   MessageCircle, 
   ChevronRight, 
@@ -26,6 +26,9 @@ import { format, parseISO } from 'date-fns';
 import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
 
+const LOCALSTORAGE_KEY = 'lkzap_table_column_widths_v1';
+const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
+
 export const LeadTable = () => {
   const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter } = useLeadStore();
   const { banks, origins, messageTemplates, leadStatuses } = useSettingsStore();
@@ -41,6 +44,21 @@ export const LeadTable = () => {
   const [now, setNow] = useState(Date.now());
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
 
+  // Column resizing state
+  const [columnWidths, setColumnWidths] = useState<number[]>(() => {
+    try {
+      const raw = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length === DEFAULT_WIDTHS.length) return parsed;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_WIDTHS;
+  });
+  const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+
   const getBankInfo = (bankName: string) => {
     return banks.find(b => (typeof b === 'string' ? b : b.name) === bankName);
   };
@@ -54,6 +72,36 @@ export const LeadTable = () => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = e.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(80, resizingRef.current.startWidth + delta);
+      setColumnWidths(prev => {
+        const copy = [...prev];
+        copy[resizingRef.current!.index] = newWidth;
+        return copy;
+      });
+    };
+    const onMouseUp = () => {
+      if (resizingRef.current) {
+        try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(columnWidths)); } catch (e) {}
+      }
+      resizingRef.current = null;
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [columnWidths]);
+
+  const startResize = (e: React.MouseEvent, index: number) => {
+    resizingRef.current = { index, startX: e.clientX, startWidth: columnWidths[index] };
+    e.preventDefault();
+  };
 
   const isCooldownActive = !!(cooldownUntil && now < cooldownUntil);
   const cooldownSeconds = isCooldownActive ? Math.ceil((cooldownUntil - now) / 1000) : 0;
@@ -98,6 +146,12 @@ export const LeadTable = () => {
   const handleSendWhatsApp = (lead: Lead) => {
     if (isCooldownActive) return;
 
+    const cleanPhone = normalizePhone(lead.phone);
+    if (!cleanPhone || cleanPhone.length < 11) {
+      alert('Telefone inválido para envio de WhatsApp.');
+      return;
+    }
+
     const selectedTmplId = lead.selectedTemplateId;
     const template = messageTemplates.find(t => t.id === selectedTmplId) || 
                      messageTemplates.find(t => t.isDefault) || 
@@ -129,9 +183,13 @@ export const LeadTable = () => {
   };
 
   const handleCopyCPF = (cpf: string) => {
-    navigator.clipboard.writeText(formatCPF(cpf));
-    setCopiedCpf(cpf);
-    setTimeout(() => setCopiedCpf(null), 2000);
+    try {
+      navigator.clipboard.writeText(formatCPF(cpf));
+      setCopiedCpf(cpf);
+      setTimeout(() => setCopiedCpf(null), 2000);
+    } catch (e) {
+      console.error('Erro ao copiar CPF', e);
+    }
   };
 
   const formatCurrency = (val: number) => {
@@ -148,12 +206,31 @@ export const LeadTable = () => {
       return parseISO(b.consultDate).getTime() - parseISO(a.consultDate).getTime();
     });
 
-    if (targetLeads.length > 0) {
-      handleSendWhatsApp(targetLeads[0]);
+    // Find first valid candidate considering phone and template requirements
+    let candidate: Lead | undefined;
+    for (const l of targetLeads) {
+      const cleanPhone = normalizePhone(l.phone);
+      if (!cleanPhone || cleanPhone.length < 11) continue;
+
+      const selectedTmplId = l.selectedTemplateId;
+      const template = messageTemplates.find(t => t.id === selectedTmplId) || 
+                       messageTemplates.find(t => t.isDefault) || 
+                       messageTemplates[0];
+      // If template requires {valor} ensure lead has availableValue
+      if (template && template.content && template.content.includes('{valor}') && (!l.availableValue || l.availableValue <= 0)) continue;
+
+      candidate = l;
+      break;
+    }
+
+    if (candidate) {
+      handleSendWhatsApp(candidate);
     } else {
       alert("Nenhum cliente disponível nos filtros atuais para disparo automático.");
     }
   };
+
+  const columns = ['Nome / Origem','WhatsApp','Banco','Valor','Status / Fila','Ações'];
 
   return (
     <div className="flex flex-col gap-4">
@@ -167,13 +244,13 @@ export const LeadTable = () => {
               placeholder="Buscar por nome, CPF ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text[...]"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
             />
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg font-semibold border border-emerald-100 dark:bord[...]"
+              className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg font-semibold border border-emerald-100 dark:border-emerald-700/30"
             >
               <UploadIcon size={18} />
               <span className="hidden sm:inline">Importar</span>
@@ -252,12 +329,12 @@ export const LeadTable = () => {
 
       <div className="flex items-center justify-between px-1">
         <div className="text-sm text-slate-500 font-medium italic">
-          Exibindo <span className="text-emerald-600 dark:text-emerald-400 font-bold not-italic">{filteredLeads.length}</span> de <span className="font-bold not-italic">{leads.length}</span> lead[...]
+          Exibindo <span className="text-emerald-600 dark:text-emerald-400 font-bold not-italic">{filteredLeads.length}</span> de <span className="font-bold not-italic">{leads.length}</span> leads
         </div>
         <button 
           onClick={handleNextClient}
           disabled={isCooldownActive}
-          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 disabled:cu[...]"
+          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold"
         >
           {isCooldownActive ? `Dispensa: ${cooldownSeconds}s` : 'Chamar Próximo'}
           <ChevronRight size={18} />
@@ -266,15 +343,24 @@ export const LeadTable = () => {
 
       <div className="glass-panel rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-800/50 shadow-lg">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left table-fixed">
+            <colgroup>
+              {columnWidths.map((w, idx) => (
+                <col key={idx} style={{ width: `${w}px`, minWidth: '80px' }} />
+              ))}
+            </colgroup>
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Nome / Origem</th>
-                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">WhatsApp</th>
-                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">Banco</th>
-                <th className="px-6 py-4 text-right border-l border-slate-100 dark:border-slate-800/50">Valor</th>
-                <th className="px-6 py-4 border-l border-slate-100 dark:border-slate-800/50">Status / Fila</th>
-                <th className="px-6 py-4 text-right border-l border-slate-100 dark:border-slate-800/50">Ações</th>
+                {columns.map((col, idx) => (
+                  <th key={col} className={`px-6 py-4 relative ${idx === 3 ? 'text-right' : ''}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{col}</span>
+                      {idx < columns.length - 1 && (
+                        <div onMouseDown={(e) => startResize(e, idx)} className="w-2 h-6 cursor-col-resize" title="Arrastar para redimensionar" />
+                      )}
+                    </div>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -290,10 +376,10 @@ export const LeadTable = () => {
                 </tr>
               ) : (
                 filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all group">
+                  <tr key={lead.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
                           {lead.outdated && <span title="Dados desatualizados"><AlertCircle size={14} className="text-red-500" /></span>}
                         </span>
@@ -302,29 +388,24 @@ export const LeadTable = () => {
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex flex-col">
-                        <button 
-                          onClick={() => handleCopyCPF(lead.cpf)}
-                          className="flex items-center gap-1 text-[11px] font-mono text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors mb-0.5 w-fit"
-                          title="Copiar CPF"
-                        >
-                          {formatCPF(lead.cpf)}
-                          {copiedCpf === lead.cpf ? (
-                            <Check size={12} className="text-emerald-500" />
-                          ) : (
-                            <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                          )}
-                        </button>
-                        <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">{formatDisplayPhone(lead.phone)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-mono text-slate-400">{formatCPF(lead.cpf)}</span>
+                          <button onClick={() => handleCopyCPF(lead.cpf)} className="p-1 rounded text-slate-400 hover:text-emerald-600" title="Copiar CPF">
+                            {copiedCpf === lead.cpf ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                        {copiedCpf === lead.cpf && <span className="text-[11px] text-emerald-600 mt-1">CPF copiado</span>}
+                        <span className="font-bold text-slate-700 dark:text-slate-200 text-xs mt-1">{formatDisplayPhone(lead.phone)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
-                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflo[...]">
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflow-hidden">
                             <img src={getBankInfo(lead.bank)?.logo} alt={lead.bank} className="w-full h-full object-contain p-1" />
                           </div>
                         ) : (
-                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-sla[...]">
+                          <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200/60">
                           </div>
                         )}
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
@@ -353,24 +434,24 @@ export const LeadTable = () => {
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10">
-                      <div className="inline-flex flex-col items-start mr-3 align-middle group/sel">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase mb-1 ml-1 group-hover/sel:text-emerald-500 transition-colors">Mensagem</span>
-                        <select 
-                          value={lead.selectedTemplateId || (messageTemplates.find(t => t.isDefault)?.id || '')}
-                          onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
-                          className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w[...]"
-                        >
-                          <option value="">Padrão</option>
-                          {messageTemplates.map(tmpl => (
-                            <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div className="inline-flex gap-1">
-                        <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scal[...]" />
-                        <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all active:[...]" />
-                        <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all active:sca[...]" />
+                      <div className="inline-flex flex-col items-start mr-3 align-middle">
+                        <div className="mb-2">
+                          <select 
+                            value={lead.selectedTemplateId || (messageTemplates.find(t => t.isDefault)?.id || '')}
+                            onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
+                            className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px]"
+                          >
+                            <option value="">Padrão</option>
+                            {messageTemplates.map(tmpl => (
+                              <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="inline-flex gap-1">
+                          <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-95">Enviar</button>
+                          <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all">Editar</button>
+                          <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all">Excluir</button>
+                        </div>
                       </div>
                     </td>
                   </tr>
