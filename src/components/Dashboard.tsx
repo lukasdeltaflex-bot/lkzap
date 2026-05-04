@@ -29,7 +29,6 @@ export const Dashboard = () => {
   const { leads, sendsTodayCount, resetSendsIfNewDay, runAutoRules, dashboardFilter, setDashboardFilter } = useLeadStore();
 
   useEffect(() => {
-    console.log("Dashboard Version: 2026-05-04 15:40 (Real Status Fix)");
     resetSendsIfNewDay();
     runAutoRules();
     
@@ -69,7 +68,6 @@ export const Dashboard = () => {
           <span className="text-sm font-medium uppercase tracking-wider">{DASHBOARD_CARDS.ready.label}</span>
         </div>
         <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{readyLeadsCount}</span>
-        <span className="absolute bottom-1 right-2 text-[8px] opacity-20 pointer-events-none">v1.1</span>
       </div>
 
       <div 
