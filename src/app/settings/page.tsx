@@ -12,8 +12,10 @@ import {
   Save, 
   LayoutDashboard,
   ImageIcon,
-  Search
+  Search,
+  ArrowLeft
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { 
   DndContext, 
   closestCenter, 
@@ -103,6 +105,8 @@ export default function SettingsPage() {
     removeDashboardCard
   } = useSettingsStore();
 
+  const router = useRouter();
+
   // Navigation state
   const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
   
@@ -174,6 +178,15 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
+      {/* Back Button */}
+      <button 
+        onClick={() => router.push('/')}
+        className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 transition-colors mb-6 group"
+      >
+        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+        <span className="font-bold text-sm uppercase tracking-widest">Voltar ao Dashboard</span>
+      </button>
+
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar Navigation */}
         <div className="w-full md:w-64 flex flex-col gap-2">
@@ -299,6 +312,16 @@ export default function SettingsPage() {
                     {banks.map(bank => (
                       <SortableItem key={bank.id} id={bank.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-emerald-500/30 transition-all">
                         <div className="flex-1 flex items-center gap-4">
+                          {/* Bank Logo / Fallback */}
+                          <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                            {bank.logo ? (
+                              <img src={bank.logo} alt={bank.name} className="w-full h-full object-contain" />
+                            ) : (
+                              <div className="text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                                {bank.name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
                           <span className={`text-sm font-medium ${bank.active ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 line-through'}`}>
                             {bank.name}
                           </span>
@@ -533,18 +556,18 @@ export default function SettingsPage() {
                     <div className="space-y-4">
                       {(dashboardCards || []).map((card) => (
                         <SortableItem key={card.id} id={card.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex gap-4 group transition-all hover:border-emerald-500/30 shadow-sm">
-                          <div className="flex-1">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                              <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                              <div className="flex items-center gap-3 flex-1 min-w-[200px]">
                                 <input 
                                   type="text" 
                                   value={card.label} 
                                   onChange={(e) => updateDashboardCard(card.id, { label: e.target.value })}
-                                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-black shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-black shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none w-full"
                                 />
                                 <button 
                                   onClick={() => updateDashboardCard(card.id, { visible: !card.visible })}
-                                  className={`text-[10px] font-black px-2 py-1 rounded transition-colors ${card.visible ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-200 text-slate-500 dark:bg-slate-800'}`}
+                                  className={`text-[10px] font-black px-2 py-1.5 rounded transition-colors whitespace-nowrap ${card.visible ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-200 text-slate-500 dark:bg-slate-800'}`}
                                 >
                                   {card.visible ? 'VISÍVEL' : 'OCULTO'}
                                 </button>
