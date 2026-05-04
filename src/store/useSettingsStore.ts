@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Bank, MessageTemplate, Tabulation, LeadStatusConfig } from '../types';
 
+export interface DashboardCardConfig {
+  id: string;
+  statusName: string;
+  label: string;
+  visible: boolean;
+  order: number;
+  color?: string;
+}
+
 interface SettingsStore {
   banks: Bank[];
   origins: string[];
@@ -89,21 +98,11 @@ const DEFAULT_STATUSES: LeadStatusConfig[] = [
 
 const DEFAULT_ORIGINS = ['URA Reversa', 'Lista própria', 'Arquivo TXT', 'Excel', 'Indicação', 'Outro'];
 
-export interface DashboardCardConfig {
-  id: string;
-  label: string;
-  statuses: string[];
-  visible: boolean;
-  order: number;
-  icon?: string;
-  color?: string;
-}
-
 const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
-  { id: 'ready', label: 'Prontos', statuses: ['Com limite', 'Pronto para envio', 'Pronto para enviar'], visible: true, order: 1, color: 'blue' },
-  { id: 'sent', label: 'Enviados', statuses: ['Mensagem enviada'], visible: true, order: 2, color: 'emerald' },
-  { id: 'responded', label: 'Respostas', statuses: ['Não respondeu', 'Não quer', 'Reabordar depois'], visible: true, order: 3, color: 'amber' },
-  { id: 'closed', label: 'Fechados', statuses: ['Venda realizada', 'Fechado'], visible: true, order: 4, color: 'purple' },
+  { id: "1", statusName: "Com limite", label: "Prontos", visible: true, order: 1, color: "blue" },
+  { id: "2", statusName: "Mensagem enviada", label: "Enviados", visible: true, order: 2, color: "emerald" },
+  { id: "3", statusName: "Não respondeu", label: "Respostas", visible: true, order: 3, color: "amber" },
+  { id: "4", statusName: "Fechado", label: "Fechados", visible: true, order: 4, color: "purple" }
 ];
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -118,7 +117,7 @@ export const useSettingsStore = create<SettingsStore>()(
       dashboardCards: DEFAULT_DASHBOARD_CARDS,
 
       updateDashboardCard: (id, data) => set((state) => ({
-        dashboardCards: state.dashboardCards.map(c => c.id === id ? { ...c, ...data } : c)
+        dashboardCards: (state.dashboardCards || DEFAULT_DASHBOARD_CARDS).map(c => c.id === id ? { ...c, ...data } : c)
       })),
 
       reorderDashboardCards: (cards) => set({ dashboardCards: cards }),
@@ -197,7 +196,6 @@ export const useSettingsStore = create<SettingsStore>()(
       version: 1,
       migrate: (persistedState: any, version: number) => {
         if (version === 0) {
-          // Migration from string[] banks to Bank[]
           if (Array.isArray(persistedState.banks) && persistedState.banks.length > 0 && typeof persistedState.banks[0] === 'string') {
             persistedState.banks = persistedState.banks.map((name: string, index: number) => ({
               id: `old-${index}`,
