@@ -5,6 +5,7 @@ import { ThemeProvider } from "../components/ThemeProvider";
 import { AuthGuard } from "../components/AuthGuard";
 import { Header } from "../components/Header";
 import { AuthProvider } from "../context/AuthContext";
+import { ServiceWorkerRegister } from "../components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -33,6 +34,7 @@ export default function RootLayout({
               <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
                 {children}
               </main>
+              <ServiceWorkerRegister />
             </AuthGuard>
           </AuthProvider>
         </ThemeProvider>

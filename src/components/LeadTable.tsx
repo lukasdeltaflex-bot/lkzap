@@ -86,6 +86,7 @@ export const LeadTable = () => {
   };
 
   useEffect(() => {
+    console.log("LeadTable Version: 2026-05-04 15:40 (Real Status Fix)");
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
