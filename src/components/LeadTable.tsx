@@ -28,14 +28,13 @@ import { format, parseISO } from 'date-fns';
 import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
 import { UraImportModal } from './UraImportModal';
-import { DASHBOARD_CARDS } from './Dashboard';
 
 const LOCALSTORAGE_KEY = 'lkzap_table_column_widths_v1';
 const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
 
 export const LeadTable = () => {
   const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter } = useLeadStore();
-  const { banks, origins, messageTemplates, leadStatuses } = useSettingsStore();
+  const { banks, origins, messageTemplates, leadStatuses, dashboardCards } = useSettingsStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBank, setFilterBank] = useState('');
@@ -152,13 +151,13 @@ export const LeadTable = () => {
       }
 
       if (dashboardFilter === 'ready') {
-        if (!DASHBOARD_CARDS.ready.statuses.includes(lead.status)) return false;
+        if (!dashboardCards.ready.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'sent') {
-        if (!DASHBOARD_CARDS.sent.statuses.includes(lead.status)) return false;
+        if (!dashboardCards.sent.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'responded') {
-        if (!DASHBOARD_CARDS.responded.statuses.includes(lead.status)) return false;
+        if (!dashboardCards.responded.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'closed') {
-        if (!DASHBOARD_CARDS.closed.statuses.includes(lead.status)) return false;
+        if (!dashboardCards.closed.statuses.includes(lead.status)) return false;
       } else {
         const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;
         const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
