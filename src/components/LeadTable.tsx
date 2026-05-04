@@ -151,13 +151,13 @@ export const LeadTable = () => {
       }
 
       if (dashboardFilter === 'ready') {
-        if (!dashboardCards.ready.statuses.includes(lead.status)) return false;
+        if (!dashboardCards || !dashboardCards.ready.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'sent') {
-        if (!dashboardCards.sent.statuses.includes(lead.status)) return false;
+        if (!dashboardCards || !dashboardCards.sent.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'responded') {
-        if (!dashboardCards.responded.statuses.includes(lead.status)) return false;
+        if (!dashboardCards || !dashboardCards.responded.statuses.includes(lead.status)) return false;
       } else if (dashboardFilter === 'closed') {
-        if (!dashboardCards.closed.statuses.includes(lead.status)) return false;
+        if (!dashboardCards || !dashboardCards.closed.statuses.includes(lead.status)) return false;
       } else {
         const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;
         const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
