@@ -327,6 +327,24 @@ export default function SettingsPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
+                          <label className="cursor-pointer p-1 text-slate-400 hover:text-emerald-500 transition-colors" title="Subir logo do banco">
+                            <ImageIcon size={16} />
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    updateBank(bank.id, { logo: reader.result as string });
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
                           <button 
                             onClick={() => updateBank(bank.id, { active: !bank.active })}
                             className={`text-[10px] font-black px-2 py-1 rounded transition-colors ${bank.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}

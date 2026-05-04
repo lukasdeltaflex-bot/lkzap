@@ -12,13 +12,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   purple: CheckCircle
 };
 
-const COLOR_MAP: Record<string, string> = {
-  blue: 'text-blue-600 dark:text-blue-400 border-blue-500 hover:border-blue-300',
-  emerald: 'text-emerald-600 dark:text-emerald-400 border-emerald-500 hover:border-emerald-300',
-  amber: 'text-amber-600 dark:text-amber-400 border-amber-500 hover:border-amber-300',
-  purple: 'text-purple-600 dark:text-purple-400 border-purple-500 hover:border-purple-300'
-};
-
 const DEFAULT_FALLBACK_CARDS: DashboardCardConfig[] = [
   { id: "1", statusName: "Com limite", label: "Prontos", visible: true, order: 1, color: "blue" },
   { id: "2", statusName: "Mensagem enviada", label: "Enviados", visible: true, order: 2, color: "emerald" },
@@ -28,7 +21,7 @@ const DEFAULT_FALLBACK_CARDS: DashboardCardConfig[] = [
 
 export const Dashboard = () => {
   const { leads, resetSendsIfNewDay, runAutoRules, dashboardFilter, setDashboardFilter } = useLeadStore();
-  const { dashboardCards } = useSettingsStore();
+  const { dashboardCards, leadStatuses } = useSettingsStore();
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -71,8 +64,9 @@ export const Dashboard = () => {
         </div>
       ) : (
         visibleCards.map((card) => {
+          const statusConfig = (leadStatuses || []).find(s => s.name === card.statusName);
+          const statusColor = statusConfig?.color || '#94a3b8';
           const Icon = ICON_MAP[card.color || 'blue'] || Users;
-          const colorClasses = COLOR_MAP[card.color || 'blue'] || COLOR_MAP.blue;
           const count = (leads || []).filter(l => l.status === card.statusName).length;
           const isActive = dashboardFilter === card.statusName;
 
@@ -81,14 +75,28 @@ export const Dashboard = () => {
               key={card.id}
               onClick={() => toggleFilter(card.statusName)}
               className={`glass-panel p-4 rounded-xl shadow-sm flex flex-col items-center justify-center text-center cursor-pointer transition-all border-2 relative overflow-hidden ${
-                isActive ? colorClasses.split(' ')[2] + ' scale-[1.02] shadow-md' : 'border-transparent ' + colorClasses.split(' ').slice(3).join(' ')
+                isActive ? 'scale-[1.02] shadow-md' : 'border-transparent hover:border-slate-200 dark:hover:border-slate-700'
               }`}
+              style={{ 
+                borderColor: isActive ? statusColor : 'transparent'
+              }}
             >
-              <div className={`flex items-center space-x-2 mb-1 ${colorClasses.split(' ')[0]} ${colorClasses.split(' ')[1]}`}>
+              <div 
+                className="flex items-center space-x-2 mb-1"
+                style={{ color: statusColor }}
+              >
                 <Icon size={18} />
                 <span className="text-sm font-medium uppercase tracking-wider">{card.label}</span>
               </div>
               <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{count}</span>
+              
+              {/* Active Indicator Bar */}
+              {isActive && (
+                <div 
+                  className="absolute bottom-0 left-0 right-0 h-1"
+                  style={{ backgroundColor: statusColor }}
+                />
+              )}
             </div>
           );
         })
