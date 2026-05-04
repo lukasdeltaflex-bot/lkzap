@@ -36,18 +36,6 @@ const BANK_KEYWORDS: Record<string, string> = {
   'caixa': 'Caixa',
 };
 
-function extractField(text: string, ...labels: string[]): string {
-  for (const label of labels) {
-    // Try "Label: value" pattern (case insensitive)
-    const regex = new RegExp(`${label}\\s*[:=]\\s*(.+)`, 'im');
-    const match = text.match(regex);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-  return '';
-}
-
 function detectBank(campanha: string, text: string): string {
   const search = (campanha + ' ' + text).toLowerCase();
   for (const [keyword, bankName] of Object.entries(BANK_KEYWORDS)) {
@@ -58,46 +46,97 @@ function detectBank(campanha: string, text: string): string {
   return '';
 }
 
-function deriveStatus(tecla: string): string {
-  switch (tecla.trim()) {
-    case '1':
-    case '2':
-      return 'Com limite';
-    case '3':
-      return 'Sem limite';
-    default:
-      return 'Novo';
-  }
-}
-
 function buildObservations(result: Partial<UraParseResult>): string {
   const lines: string[] = [];
+  if (result.teclaDigitada) lines.push(`Tecla Digitada: ${result.teclaDigitada}`);
   if (result.campanha) lines.push(`Campanha: ${result.campanha}`);
-  if (result.statusUra) lines.push(`Status URA: ${result.statusUra}`);
+  if (result.statusUra) lines.push(`Status: ${result.statusUra}`);
   if (result.empregador) lines.push(`Empregador: ${result.empregador}`);
   if (result.mailing) lines.push(`Mailing: ${result.mailing}`);
-  if (result.teclaDigitada) lines.push(`Tecla: ${result.teclaDigitada}`);
   return lines.join('\n');
 }
 
 export function parseUraText(text: string): UraParseResult {
-  const nome = extractField(text, 'Nome', 'NOME', 'Cliente');
-  const cpf = extractField(text, 'CPF', 'Cpf').replace(/\D/g, '');
-  const telefone = extractField(text, 'Contato', 'Telefone', 'Tel', 'Celular', 'WhatsApp', 'Phone').replace(/\D/g, '');
-  const campanha = extractField(text, 'Campanha', 'CAMPANHA', 'Campaign');
-  const statusUra = extractField(text, 'Status', 'STATUS');
-  const teclaDigitada = extractField(text, 'Tecla Digitada', 'Tecla', 'DTMF', 'Opção');
-  const empregador = extractField(text, 'Empregador', 'EMPREGADOR', 'Employer');
-  const mailing = extractField(text, 'MAILING', 'Mailing', 'Lista');
+  console.log("Texto URA recebido:", text);
 
-  const banco = detectBank(campanha, text);
-  const origem = mailing ? 'URA Reversa' : 'Outro';
-  const statusLead = deriveStatus(teclaDigitada);
+  // Normalize text: replace multiple spaces with single space
+  const normalizedText = text.replace(/[ \t]+/g, ' ').trim();
+
+  function extractLineRegex(labels: string[]): string {
+    for (const label of labels) {
+      const regex = new RegExp(`\\b${label}\\b\\s*[:=]?\\s*([^\\n]+)`, 'im');
+      const match = normalizedText.match(regex);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    return '';
+  }
+
+  const nome = extractLineRegex(['Nome', 'NOME', 'Cliente']);
+
+  let cpf = '';
+  const cpfRegex = /(?:CPF|Cpf)\s*[:=]?\s*([0-9\.\-\s]+)/i;
+  const cpfMatch = normalizedText.match(cpfRegex);
+  if (cpfMatch) {
+    cpf = cpfMatch[1].replace(/\D/g, '');
+  }
+  if (cpf.length < 11) {
+    const fallbackCpfMatch = normalizedText.match(/\b([0-9]{3}\.[0-9]{3}\.[0-9]{3}\-[0-9]{2}|[0-9]{11})\b/);
+    if (fallbackCpfMatch) {
+       cpf = fallbackCpfMatch[1].replace(/\D/g, '');
+    }
+  }
+  cpf = cpf.substring(0, 11);
+
+  let telefone = '';
+  const phoneRegex = /(?:Contato|Telefone|Tel|Celular|WhatsApp|Phone)\s*[:=]?\s*([0-9\s\-\(\)]{10,15})/i;
+  let phoneMatch = null;
+  
+  // Custom matcher for Contact
+  const contactLines = normalizedText.match(/(?:Contato|Telefone|Tel|Celular|WhatsApp|Phone)\s*[:=]?\s*([^\n]+)/ig);
+  if (contactLines) {
+    for (const line of contactLines) {
+      const nums = line.replace(/\D/g, '');
+      if (nums.length >= 10 && nums.length <= 13) {
+        telefone = nums;
+        break;
+      }
+    }
+  }
+
+  if (telefone.length < 10) {
+    const fallbackPhoneMatch = normalizedText.match(/\b([1-9]{2}\s*9?\s*[0-9]{4}\s*\-?\s*[0-9]{4})\b/);
+    if (fallbackPhoneMatch) {
+      telefone = fallbackPhoneMatch[1].replace(/\D/g, '');
+    }
+  }
+
+  // Prepend 55 if not present and has 10/11 digits
+  if (telefone.length === 10 || telefone.length === 11) {
+    telefone = '55' + telefone;
+  }
+
+  const campanha = extractLineRegex(['Campanha', 'CAMPANHA', 'Campaign']);
+  
+  // Custom extract for tempo/status since they can be tricky
+  const tempoMatch = normalizedText.match(/\bTempo\b\s*[:=]?\s*([^\n]+)/i);
+  const statusUra = extractLineRegex(['Status', 'STATUS']);
+  const teclaDigitada = extractLineRegex(['Tecla Digitada', 'Tecla', 'DTMF', 'Opção']);
+  const empregador = extractLineRegex(['Empregador', 'EMPREGADOR', 'Employer']);
+  const mailing = extractLineRegex(['MAILING', 'Mailing', 'Lista']);
+
+  const banco = detectBank(campanha, normalizedText);
+  const origem = mailing ? mailing : 'URA Reversa';
+  const statusLead = 'Novo da URA';
 
   const partial = { campanha, statusUra, empregador, mailing, teclaDigitada };
-  const observations = buildObservations(partial);
+  let observations = buildObservations(partial);
+  if (tempoMatch && tempoMatch[1]) {
+    observations += `\nTempo: ${tempoMatch[1].trim()}`;
+  }
 
-  return {
+  const result = {
     nome,
     cpf,
     telefone,
@@ -111,4 +150,7 @@ export function parseUraText(text: string): UraParseResult {
     statusLead,
     observations,
   };
+
+  console.log("Dados extraídos da URA:", result);
+  return result;
 }

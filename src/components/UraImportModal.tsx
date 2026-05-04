@@ -46,9 +46,26 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
     setCpf(result.cpf ? formatCPF(result.cpf) : '');
     setPhone(formatDisplayPhone(result.telefone));
     setBank(result.banco || (banks.length > 0 ? (typeof banks[0] === 'string' ? banks[0] : banks[0].name) : ''));
-    setOrigin(result.origem || (origins.length > 0 ? origins[0] : ''));
-    setValue('');
-    setStatus(result.statusLead || leadStatuses[0]?.name || 'Novo');
+    
+    // Origin handling
+    let defaultOrigin = result.origem;
+    if (!origins.includes(defaultOrigin)) {
+      if (origins.includes('URA Reversa')) defaultOrigin = 'URA Reversa';
+      else if (origins.includes('Outro')) defaultOrigin = 'Outro';
+    }
+    setOrigin(defaultOrigin);
+
+    setValue(''); // Let it be 0 implicitly or visually empty
+    
+    // Status handling
+    const hasNovoUra = leadStatuses.some(s => s.name === 'Novo da URA');
+    const hasAguardando = leadStatuses.some(s => s.name === 'Aguardando consulta');
+    let defaultStatus = 'Novo';
+    if (hasNovoUra) defaultStatus = 'Novo da URA';
+    else if (hasAguardando) defaultStatus = 'Aguardando consulta';
+    else if (leadStatuses.length > 0) defaultStatus = leadStatuses[0].name;
+    
+    setStatus(result.statusLead === 'Novo da URA' ? defaultStatus : (result.statusLead || defaultStatus));
     setObservations(result.observations);
 
     // Check duplicates
@@ -82,9 +99,9 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
       bank,
       origin,
       availableValue: parseCurrencyBRL(value) || 0,
-      consultDate: new Date().toISOString(),
+      consultDate: '', // Data de consulta vazia/null como solicitado
       status,
-      queue: 'Pronto para enviar',
+      queue: 'Aguardando', // Fila inicial deve ser Aguardando
       lastAction: 'Nunca chamado',
       observations,
     });
@@ -119,7 +136,7 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
   }
 
   const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
-  const canSave = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, '').length >= 10 && bank;
+  const canSave = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, '').length >= 10;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -225,6 +242,7 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Origem</label>
                 <select value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold">
+                  {origins.includes(origin) ? null : <option value={origin}>{origin}</option>}
                   {origins.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
