@@ -9,8 +9,11 @@ interface SettingsStore {
   messageTemplates: MessageTemplate[];
   leadStatuses: LeadStatusConfig[];
   logoBase64: string | null;
+  dashboardCards: DashboardCardConfig[];
   
   // Actions
+  updateDashboardCard: (id: string, data: Partial<DashboardCardConfig>) => void;
+  reorderDashboardCards: (cards: DashboardCardConfig[]) => void;
   addBank: (name: string, logo?: string) => void;
   updateBank: (id: string, data: Partial<Bank>) => void;
   removeBank: (id: string) => void;
@@ -86,6 +89,23 @@ const DEFAULT_STATUSES: LeadStatusConfig[] = [
 
 const DEFAULT_ORIGINS = ['URA Reversa', 'Lista própria', 'Arquivo TXT', 'Excel', 'Indicação', 'Outro'];
 
+export interface DashboardCardConfig {
+  id: string;
+  label: string;
+  statuses: string[];
+  visible: boolean;
+  order: number;
+  icon?: string;
+  color?: string;
+}
+
+const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
+  { id: 'ready', label: 'Prontos', statuses: ['Com limite', 'Pronto para envio', 'Pronto para enviar'], visible: true, order: 1, color: 'blue' },
+  { id: 'sent', label: 'Enviados', statuses: ['Mensagem enviada'], visible: true, order: 2, color: 'emerald' },
+  { id: 'responded', label: 'Respostas', statuses: ['Não respondeu', 'Não quer', 'Reabordar depois'], visible: true, order: 3, color: 'amber' },
+  { id: 'closed', label: 'Fechados', statuses: ['Venda realizada', 'Fechado'], visible: true, order: 4, color: 'purple' },
+];
+
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
@@ -95,6 +115,13 @@ export const useSettingsStore = create<SettingsStore>()(
       messageTemplates: DEFAULT_TEMPLATES,
       leadStatuses: DEFAULT_STATUSES,
       logoBase64: null,
+      dashboardCards: DEFAULT_DASHBOARD_CARDS,
+
+      updateDashboardCard: (id, data) => set((state) => ({
+        dashboardCards: state.dashboardCards.map(c => c.id === id ? { ...c, ...data } : c)
+      })),
+
+      reorderDashboardCards: (cards) => set({ dashboardCards: cards }),
 
       addBank: (name, logo) => set((state) => ({
         banks: [...state.banks, { id: crypto.randomUUID(), name, logo, active: true }]
@@ -183,6 +210,9 @@ export const useSettingsStore = create<SettingsStore>()(
         }
         if (!persistedState.leadStatuses) {
           persistedState.leadStatuses = DEFAULT_STATUSES;
+        }
+        if (!persistedState.dashboardCards) {
+          persistedState.dashboardCards = DEFAULT_DASHBOARD_CARDS;
         }
         return persistedState;
       }
