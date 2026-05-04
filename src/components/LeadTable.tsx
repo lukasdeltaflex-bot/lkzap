@@ -58,6 +58,7 @@ export const LeadTable = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [hydrated, setHydrated] = useState(false);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
 
   // Column resizing state
@@ -85,6 +86,7 @@ export const LeadTable = () => {
   };
 
   useEffect(() => {
+    setHydrated(true);
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -123,6 +125,7 @@ export const LeadTable = () => {
   const cooldownSeconds = isCooldownActive ? Math.ceil((cooldownUntil - now) / 1000) : 0;
 
   const filteredLeads = useMemo(() => {
+    if (!hydrated) return [];
     return leads.filter(lead => {
       const matchesSearch = 
         lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

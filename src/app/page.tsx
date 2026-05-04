@@ -25,7 +25,7 @@ export default function Page() {
         </button>
       </div>
 
-      <Dashboard />
+      {/* <Dashboard /> */}
       
       <div className="mt-4">
         <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white mb-4">

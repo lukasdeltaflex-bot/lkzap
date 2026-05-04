@@ -27,16 +27,6 @@ export const Dashboard = () => {
   useEffect(() => {
     setHydrated(true);
     
-    // Diagnostic: Count leads by status
-    const statusCounts = (leads || []).reduce((acc: Record<string, number>, lead) => {
-      if (lead && lead.status) {
-        acc[lead.status] = (acc[lead.status] || 0) + 1;
-      }
-      return acc;
-    }, {});
-    console.log("Diagnóstico de Status dos Leads:");
-    console.table(statusCounts);
-
     resetSendsIfNewDay();
     runAutoRules();
     
