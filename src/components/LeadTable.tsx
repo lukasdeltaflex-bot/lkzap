@@ -150,9 +150,9 @@ export const LeadTable = () => {
       }
 
       if (dashboardFilter) {
-        const activeCard = dashboardCards.find(c => c.id === dashboardFilter);
+        const activeCard = (dashboardCards || []).find(c => c.id === dashboardFilter);
         if (activeCard) {
-          if (!activeCard.statuses.includes(lead.status)) return false;
+          if (!(activeCard.statuses || []).includes(lead.status)) return false;
         }
       } else {
         const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;

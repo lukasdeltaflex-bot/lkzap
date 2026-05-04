@@ -28,8 +28,10 @@ export const Dashboard = () => {
     setHydrated(true);
     
     // Diagnostic: Count leads by status
-    const statusCounts = leads.reduce((acc: Record<string, number>, lead) => {
-      acc[lead.status] = (acc[lead.status] || 0) + 1;
+    const statusCounts = (leads || []).reduce((acc: Record<string, number>, lead) => {
+      if (lead && lead.status) {
+        acc[lead.status] = (acc[lead.status] || 0) + 1;
+      }
       return acc;
     }, {});
     console.log("Diagnóstico de Status dos Leads:");
@@ -56,7 +58,7 @@ export const Dashboard = () => {
     }
   };
 
-  const visibleCards = dashboardCards
+  const visibleCards = (dashboardCards || [])
     .filter(c => c.visible)
     .sort((a, b) => a.order - b.order);
 
@@ -65,7 +67,8 @@ export const Dashboard = () => {
       {visibleCards.map((card) => {
         const Icon = ICON_MAP[card.color || 'blue'] || Users;
         const colorClasses = COLOR_MAP[card.color || 'blue'] || COLOR_MAP.blue;
-        const count = leads.filter(l => card.statuses.includes(l.status)).length;
+        const cardStatuses = card.statuses || [];
+        const count = (leads || []).filter(l => cardStatuses.includes(l.status)).length;
         const isActive = dashboardFilter === card.id;
 
         return (
