@@ -4,6 +4,27 @@ import React, { useEffect } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { Users, Send, MessageCircleReply, CheckCircle } from 'lucide-react';
 
+// Configuração central dos cards. Edite o "label" para mudar o nome do card.
+// Adicione ou remova status no array "statuses" para alterar quais leads entram na contagem.
+export const DASHBOARD_CARDS = {
+  ready: {
+    label: "Prontos",
+    statuses: ["Pronto para envio", "Pronto para enviar"]
+  },
+  sent: {
+    label: "Enviados",
+    statuses: ["Mensagem enviada"]
+  },
+  responded: {
+    label: "Respostas",
+    statuses: ["Não respondeu", "Não quer", "Reabordar depois", "Interessado", "Respondeu"]
+  },
+  closed: {
+    label: "Fechados",
+    statuses: ["Venda realizada", "Fechado"]
+  }
+};
+
 export const Dashboard = () => {
   const { leads, sendsTodayCount, resetSendsIfNewDay, runAutoRules, dashboardFilter, setDashboardFilter } = useLeadStore();
 
@@ -20,9 +41,11 @@ export const Dashboard = () => {
     return () => clearInterval(interval);
   }, [resetSendsIfNewDay, runAutoRules]);
 
-  const readyLeadsCount = leads.filter(l => l.status === 'Com limite' && l.queue === 'Pronto para enviar').length;
-  const respondedLeadsCount = leads.filter(l => l.lastAction === 'Respondeu' || l.lastAction === 'Interessado').length;
-  const closedLeadsCount = leads.filter(l => l.status === 'Fechado').length;
+  // Counts derived from actual lead statuses
+  const readyLeadsCount = leads.filter(l => DASHBOARD_CARDS.ready.statuses.includes(l.status)).length;
+  const sentLeadsCount = leads.filter(l => DASHBOARD_CARDS.sent.statuses.includes(l.status)).length;
+  const respondedLeadsCount = leads.filter(l => DASHBOARD_CARDS.responded.statuses.includes(l.status)).length;
+  const closedLeadsCount = leads.filter(l => DASHBOARD_CARDS.closed.statuses.includes(l.status)).length;
 
   const toggleFilter = (filter: string) => {
     if (dashboardFilter === filter) {
@@ -42,7 +65,7 @@ export const Dashboard = () => {
       >
         <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 mb-1">
           <Users size={18} />
-          <span className="text-sm font-medium uppercase tracking-wider">Prontos</span>
+          <span className="text-sm font-medium uppercase tracking-wider">{DASHBOARD_CARDS.ready.label}</span>
         </div>
         <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{readyLeadsCount}</span>
       </div>
@@ -55,11 +78,10 @@ export const Dashboard = () => {
       >
         <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 mb-1">
           <Send size={18} />
-          <span className="text-sm font-medium uppercase tracking-wider">Enviados</span>
+          <span className="text-sm font-medium uppercase tracking-wider">{DASHBOARD_CARDS.sent.label}</span>
         </div>
         <div className="flex items-end space-x-1">
-          <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{sendsTodayCount}</span>
-          <span className="text-sm text-slate-500 mb-1 font-medium">/ 20</span>
+          <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{sentLeadsCount}</span>
         </div>
       </div>
 
@@ -71,7 +93,7 @@ export const Dashboard = () => {
       >
         <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 mb-1">
           <MessageCircleReply size={18} />
-          <span className="text-sm font-medium uppercase tracking-wider">Respostas</span>
+          <span className="text-sm font-medium uppercase tracking-wider">{DASHBOARD_CARDS.responded.label}</span>
         </div>
         <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{respondedLeadsCount}</span>
       </div>
@@ -84,7 +106,7 @@ export const Dashboard = () => {
       >
         <div className="flex items-center space-x-2 text-purple-600 dark:text-purple-400 mb-1">
           <CheckCircle size={18} />
-          <span className="text-sm font-medium uppercase tracking-wider">Fechados</span>
+          <span className="text-sm font-medium uppercase tracking-wider">{DASHBOARD_CARDS.closed.label}</span>
         </div>
         <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{closedLeadsCount}</span>
       </div>
