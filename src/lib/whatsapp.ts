@@ -17,20 +17,18 @@ const replaceVariables = (content: string, lead: Lead) => {
 };
 
 export const generateWhatsAppLink = (lead: Lead, templateContent: string): string => {
-  // Build final message once, normalize NFC to avoid emoji composition issues, then encode a single time.
-  const mensagemFinal = replaceVariables(templateContent, lead);
-  const normalized = mensagemFinal.normalize && typeof mensagemFinal.normalize === 'function' ? mensagemFinal.normalize('NFC') : mensagemFinal;
-  const encoded = encodeURIComponent(normalized);
+  const text = replaceVariables(templateContent, lead);
+  const encodedText = encodeURIComponent(text);
   const cleanPhone = normalizePhone(lead.phone);
-
-  return `https://wa.me/${cleanPhone}?text=${encoded}`;
+  
+  // Use https://wa.me/ or https://api.whatsapp.com/send
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
 
 export const generateReabordagemLink = (lead: Lead, templateContent?: string): string => {
   const defaultText = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
-  const mensagemFinal = templateContent ? replaceVariables(templateContent, lead) : defaultText;
-  const normalized = mensagemFinal.normalize && typeof mensagemFinal.normalize === 'function' ? mensagemFinal.normalize('NFC') : mensagemFinal;
-  const encoded = encodeURIComponent(normalized);
+  const text = templateContent ? replaceVariables(templateContent, lead) : defaultText;
+  const encodedText = encodeURIComponent(text);
   const cleanPhone = normalizePhone(lead.phone);
 
   return `https://wa.me/${cleanPhone}?text=${encoded}`;

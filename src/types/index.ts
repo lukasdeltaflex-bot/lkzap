@@ -49,6 +49,7 @@ export interface Lead {
   bank: string; // Keep as string for now to match current store, but will map items
   origin?: string;
   availableValue: number;
+  availableValueUpdatedAt?: string;
   consultDate: string; // ISO String
   status: LeadStatus;
   queue: LeadQueue;
@@ -56,4 +57,5 @@ export interface Lead {
   lastSendDate?: string | null; // ISO String
   outdated?: boolean;
   selectedTemplateId?: string;
+  observations?: string;
 }

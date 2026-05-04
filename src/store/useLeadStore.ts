@@ -40,7 +40,16 @@ export const useLeadStore = create<LeadStore>()(
       })),
 
       updateLead: (id, data) => set((state) => ({
-        leads: state.leads.map(lead => lead.id === id ? { ...lead, ...data } : lead)
+        leads: state.leads.map(lead => {
+          if (lead.id === id) {
+            const updatedData = { ...data };
+            if (updatedData.availableValue !== undefined && updatedData.availableValue !== lead.availableValue) {
+              updatedData.availableValueUpdatedAt = new Date().toISOString();
+            }
+            return { ...lead, ...updatedData };
+          }
+          return lead;
+        })
       })),
 
       deleteLead: (id) => set((state) => ({

@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { generateWhatsAppLink, generateReabordagemLink } from '../lib/whatsapp';
 import { exportToExcel, exportToPDF } from '../lib/export';
 import { Lead } from '../types';
-import { formatDisplayPhone, formatCPF, normalizePhone } from '../lib/utils';
+import { formatDisplayPhone, formatCPF, parseCurrencyBRL, normalizePhone } from '../lib/utils';
 import { 
   MessageCircle, 
   ChevronRight, 
@@ -20,11 +20,14 @@ import {
   Edit2,
   Trash2,
   Copy,
-  Check
+  Check,
+  Zap,
+  Clock
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
+import { UraImportModal } from './UraImportModal';
 
 const LOCALSTORAGE_KEY = 'lkzap_table_column_widths_v1';
 const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
@@ -38,7 +41,20 @@ export const LeadTable = () => {
   const [filterOrigin, setFilterOrigin] = useState('');
   const [filterStatus, setFilterStatus] = useState('Com limite');
   const [filterQueue, setFilterQueue] = useState('Pronto para enviar');
+  const [filterDateStart, setFilterDateStart] = useState('');
+  const [filterDateEnd, setFilterDateEnd] = useState('');
+  const [filterDateType, setFilterDateType] = useState('cadastro'); // 'cadastro' ou 'atualizacao'
+  const [appliedFilters, setAppliedFilters] = useState({
+    bank: '',
+    origin: '',
+    status: 'Com limite',
+    queue: 'Pronto para enviar',
+    dateStart: '',
+    dateEnd: '',
+    dateType: 'cadastro'
+  });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isUraModalOpen, setIsUraModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -113,9 +129,26 @@ export const LeadTable = () => {
         lead.cpf.includes(searchTerm) ||
         lead.phone.includes(searchTerm);
       
-      const matchesBank = filterBank === '' || lead.bank === filterBank;
-      const matchesOrigin = filterOrigin === '' || lead.origin === filterOrigin;
+      const matchesBank = appliedFilters.bank === '' || lead.bank === appliedFilters.bank;
+      const matchesOrigin = appliedFilters.origin === '' || lead.origin === appliedFilters.origin;
       
+      let matchesDate = true;
+      if (appliedFilters.dateStart || appliedFilters.dateEnd) {
+        const dateToCheck = appliedFilters.dateType === 'cadastro' 
+          ? lead.consultDate 
+          : (lead.availableValueUpdatedAt || lead.consultDate);
+        const checkDate = dateToCheck ? parseISO(dateToCheck).getTime() : 0;
+        
+        if (appliedFilters.dateStart) {
+          const startDate = new Date(appliedFilters.dateStart).setHours(0,0,0,0);
+          if (checkDate < startDate) matchesDate = false;
+        }
+        if (appliedFilters.dateEnd) {
+          const endDate = new Date(appliedFilters.dateEnd).setHours(23,59,59,999);
+          if (checkDate > endDate) matchesDate = false;
+        }
+      }
+
       if (dashboardFilter === 'ready') {
         if (lead.status !== 'Com limite' || lead.queue !== 'Pronto para enviar') return false;
       } else if (dashboardFilter === 'sent') {
@@ -125,14 +158,27 @@ export const LeadTable = () => {
       } else if (dashboardFilter === 'closed') {
         if (lead.status !== 'Fechado') return false;
       } else {
-        const matchesStatus = filterStatus === '' || lead.status === filterStatus;
-        const matchesQueue = filterQueue === '' || lead.queue === filterQueue;
-        if (!matchesStatus || !matchesQueue) return false;
+        const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;
+        const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
+        if (!matchesStatus || !matchesQueue || !matchesDate) return false;
       }
 
-      return matchesSearch && matchesBank && matchesOrigin;
+      return matchesSearch && matchesBank && matchesOrigin && matchesDate;
     });
-  }, [leads, searchTerm, filterBank, filterOrigin, filterStatus, filterQueue, dashboardFilter]);
+  }, [leads, searchTerm, appliedFilters, dashboardFilter]);
+
+  const applyFilters = () => {
+    setDashboardFilter(null);
+    setAppliedFilters({
+      bank: filterBank,
+      origin: filterOrigin,
+      status: filterStatus,
+      queue: filterQueue,
+      dateStart: filterDateStart,
+      dateEnd: filterDateEnd,
+      dateType: filterDateType
+    });
+  };
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -140,8 +186,34 @@ export const LeadTable = () => {
     setFilterOrigin('');
     setFilterStatus('');
     setFilterQueue('');
+    setFilterDateStart('');
+    setFilterDateEnd('');
     setDashboardFilter(null);
+    setAppliedFilters({
+      bank: '',
+      origin: '',
+      status: '',
+      queue: '',
+      dateStart: '',
+      dateEnd: '',
+      dateType: 'cadastro'
+    });
   };
+  
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+  };
+  
+  const handleQuickEditValue = (lead: Lead, valStr: string) => {
+     const newVal = parseCurrencyBRL(valStr);
+     if (newVal !== lead.availableValue) {
+       updateLead(lead.id, { 
+         availableValue: newVal,
+         availableValueUpdatedAt: new Date().toISOString()
+       });
+     }
+  };
+
 
   const handleSendWhatsApp = (lead: Lead) => {
     if (isCooldownActive) return;
@@ -249,6 +321,13 @@ export const LeadTable = () => {
           </div>
           <div className="flex gap-2">
             <button 
+              onClick={() => setIsUraModalOpen(true)}
+              className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-4 py-2 rounded-lg font-semibold border border-amber-100 dark:border-amber-800 hover:bg-amber-100 transition-colors whitespace-nowrap"
+            >
+              <Zap size={18} />
+              <span className="hidden sm:inline">URA</span>
+            </button>
+            <button 
               onClick={() => setIsImportModalOpen(true)}
               className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg font-semibold border border-emerald-100 dark:border-emerald-700/30"
             >
@@ -274,56 +353,64 @@ export const LeadTable = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <select 
-            value={filterStatus} 
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
-          >
-            <option value="">Status (Todos)</option>
-            {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-          </select>
-
-          <select 
-            value={filterQueue} 
-            onChange={(e) => setFilterQueue(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
-          >
-            <option value="">Fila (Todas)</option>
-            <option value="Pronto para enviar">Pronto para enviar</option>
-            <option value="Aguardando">Aguardando</option>
-            <option value="Frio">Frio</option>
-            <option value="Reabordar">Reabordar</option>
-          </select>
-
-          <select 
-            value={filterBank} 
-            onChange={(e) => setFilterBank(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
-          >
-            <option value="">Todos Bancos</option>
-            {banks.map(bank => (
-              <option key={typeof bank === 'string' ? bank : bank.id} value={typeof bank === 'string' ? bank : bank.name}>
-                {typeof bank === 'string' ? bank : bank.name}
-              </option>
-            ))}
-          </select>
-
-          <select 
-            value={filterOrigin} 
-            onChange={(e) => setFilterOrigin(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
-          >
-            <option value="">Todas Origens</option>
-            {origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}
-          </select>
-
-          <button 
-            onClick={clearFilters}
-            className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-red-500 transition-colors font-medium"
-          >
-            <XCircle size={16} /> Limpar Filtros
-          </button>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+              <option value="">(Todos)</option>
+              {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+            </select>
+          </div>
+          
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Fila</label>
+            <select value={filterQueue} onChange={(e) => setFilterQueue(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+              <option value="">(Todas)</option>
+              <option value="Pronto para enviar">Pronto para enviar</option>
+              <option value="Aguardando">Aguardando</option>
+              <option value="Frio">Frio</option>
+              <option value="Reabordar">Reabordar</option>
+            </select>
+          </div>
+          
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Banco</label>
+            <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+              <option value="">(Todos)</option>
+              {banks.map(bank => (
+                <option key={typeof bank === 'string' ? bank : bank.id} value={typeof bank === 'string' ? bank : bank.name}>{typeof bank === 'string' ? bank : bank.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Origem</label>
+            <select value={filterOrigin} onChange={(e) => setFilterOrigin(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+              <option value="">(Todas)</option>
+              {origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}
+            </select>
+          </div>
+          
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Data ({filterDateType})</label>
+            <div className="flex gap-1">
+               <input type="date" value={filterDateStart} onChange={e => setFilterDateStart(e.target.value)} className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100" />
+               <input type="date" value={filterDateEnd} onChange={e => setFilterDateEnd(e.target.value)} className="w-1/2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100" />
+            </div>
+          </div>
+          
+          <div className="flex flex-col">
+             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo de Data</label>
+             <select value={filterDateType} onChange={e => setFilterDateType(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+               <option value="cadastro">Data de cadastro</option>
+               <option value="atualizacao">Data de atualização</option>
+             </select>
+          </div>
+          
+          <div className="flex gap-2 h-full items-end pb-0.5">
+            <button onClick={applyFilters} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg p-2 font-bold text-xs transition-colors">Aplicar</button>
+            <button onClick={clearFilters} className="flex-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg p-2 font-bold text-xs transition-colors">Limpar</button>
+          </div>
         </div>
       </div>
 
@@ -381,9 +468,17 @@ export const LeadTable = () => {
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
+                          <button onClick={() => { handleCopy(lead.name, "Nome"); alert("Nome copiado!"); }} className="ml-1 text-slate-400 hover:text-emerald-500" title="Copiar Nome"><Copy size={12}/></button>
                           {lead.outdated && <span title="Dados desatualizados"><AlertCircle size={14} className="text-red-500" /></span>}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{lead.origin || 'N/A'}</span>
+                        <select 
+                          value={lead.origin || ''}
+                          onChange={(e) => updateLead(lead.id, { origin: e.target.value })}
+                          className="text-[10px] text-slate-500 bg-transparent uppercase tracking-wider font-bold outline-none border-none mt-1 w-24 p-0 cursor-pointer"
+                        >
+                          <option value="">N/A</option>
+                          {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
                       </div>
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
@@ -408,11 +503,33 @@ export const LeadTable = () => {
                           <div className="w-9 h-9 min-w-[36px] rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-200/60">
                           </div>
                         )}
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{lead.bank}</span>
+                        <select 
+                          value={lead.bank}
+                          onChange={(e) => updateLead(lead.id, { bank: e.target.value })}
+                          className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-24"
+                        >
+                           {banks.map(b => (
+                             <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                               {typeof b === 'string' ? b : b.name}
+                             </option>
+                           ))}
+                        </select>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
-                      {formatCurrency(lead.availableValue)}
+                      <div className="flex flex-col items-end">
+                        <input 
+                          type="text"
+                          defaultValue={formatCurrency(lead.availableValue)}
+                          onBlur={(e) => handleQuickEditValue(lead, e.target.value)}
+                          className="bg-transparent border-none outline-none text-right font-black text-emerald-600 dark:text-emerald-400 text-base w-28 focus:ring-1 focus:ring-emerald-500 rounded px-1"
+                        />
+                        {lead.availableValueUpdatedAt && (
+                          <span className="text-[9px] text-slate-400 flex items-center gap-1 font-medium mt-1">
+                            <Clock size={10} /> Atualizado em {format(parseISO(lead.availableValueUpdatedAt), 'dd/MM/yyyy')}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col gap-1.5 min-w-[140px]">
@@ -430,7 +547,16 @@ export const LeadTable = () => {
                             <option key={s.id} value={s.name} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">{s.name}</option>
                           ))}
                         </select>
-                        <span className="text-[10px] font-bold text-slate-400 pl-1">{lead.queue}</span>
+                        <select 
+                          value={lead.queue}
+                          onChange={(e) => updateLead(lead.id, { queue: e.target.value as any })}
+                          className="text-[10px] font-bold text-slate-500 bg-transparent border-none outline-none p-0 ml-1 cursor-pointer w-28"
+                        >
+                          <option value="Pronto para enviar">Pronto para enviar</option>
+                          <option value="Aguardando">Aguardando</option>
+                          <option value="Frio">Frio</option>
+                          <option value="Reabordar">Reabordar</option>
+                        </select>
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
@@ -464,6 +590,7 @@ export const LeadTable = () => {
 
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
       <EditLeadModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} lead={currentLead} />
+      <UraImportModal isOpen={isUraModalOpen} onClose={() => setIsUraModalOpen(false)} />
     </div>
   );
 };
