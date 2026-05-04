@@ -9,10 +9,8 @@ interface SettingsStore {
   messageTemplates: MessageTemplate[];
   leadStatuses: LeadStatusConfig[];
   logoBase64: string | null;
-  dashboardCards: DashboardCardsConfig;
   
   // Actions
-  updateDashboardCard: (key: keyof DashboardCardsConfig, label: string) => void;
   addBank: (name: string, logo?: string) => void;
   updateBank: (id: string, data: Partial<Bank>) => void;
   removeBank: (id: string) => void;
@@ -88,37 +86,6 @@ const DEFAULT_STATUSES: LeadStatusConfig[] = [
 
 const DEFAULT_ORIGINS = ['URA Reversa', 'Lista própria', 'Arquivo TXT', 'Excel', 'Indicação', 'Outro'];
 
-export interface DashboardCardConfig {
-  label: string;
-  statuses: string[];
-}
-
-export interface DashboardCardsConfig {
-  ready: DashboardCardConfig;
-  sent: DashboardCardConfig;
-  responded: DashboardCardConfig;
-  closed: DashboardCardConfig;
-}
-
-const DEFAULT_DASHBOARD_CARDS: DashboardCardsConfig = {
-  ready: {
-    label: "Prontos",
-    statuses: ["Com limite", "Pronto para envio", "Pronto para enviar"]
-  },
-  sent: {
-    label: "Enviados",
-    statuses: ["Mensagem enviada"]
-  },
-  responded: {
-    label: "Respostas",
-    statuses: ["Não respondeu", "Não quer", "Reabordar depois", "Interessado", "Respondeu"]
-  },
-  closed: {
-    label: "Fechados",
-    statuses: ["Venda realizada", "Fechado"]
-  }
-};
-
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
@@ -128,14 +95,6 @@ export const useSettingsStore = create<SettingsStore>()(
       messageTemplates: DEFAULT_TEMPLATES,
       leadStatuses: DEFAULT_STATUSES,
       logoBase64: null,
-      dashboardCards: DEFAULT_DASHBOARD_CARDS,
-
-      updateDashboardCard: (key, label) => set((state) => ({
-        dashboardCards: {
-          ...state.dashboardCards,
-          [key]: { ...state.dashboardCards[key], label }
-        }
-      })),
 
       addBank: (name, logo) => set((state) => ({
         banks: [...state.banks, { id: crypto.randomUUID(), name, logo, active: true }]
@@ -224,9 +183,6 @@ export const useSettingsStore = create<SettingsStore>()(
         }
         if (!persistedState.leadStatuses) {
           persistedState.leadStatuses = DEFAULT_STATUSES;
-        }
-        if (!persistedState.dashboardCards) {
-          persistedState.dashboardCards = DEFAULT_DASHBOARD_CARDS;
         }
         return persistedState;
       }

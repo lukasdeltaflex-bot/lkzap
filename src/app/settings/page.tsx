@@ -17,8 +17,7 @@ import {
   ChevronRight,
   Star,
   GripVertical,
-  Activity,
-  LayoutDashboard
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -74,12 +73,11 @@ export default function SettingsPage() {
     tabulations, addTabulation, updateTabulation, removeTabulation, reorderTabulations,
     messageTemplates, addTemplate, updateTemplate, removeTemplate, setDefaultTemplate, reorderTemplates,
     leadStatuses, addLeadStatus, updateLeadStatus, removeLeadStatus, reorderLeadStatuses,
-    dashboardCards, updateDashboardCard,
     logoBase64, setLogo 
   } = useSettingsStore();
 
   // Navigation state
-  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status'>('geral');
   
   // Local form states
   const [newBank, setNewBank] = useState("");
@@ -195,8 +193,7 @@ export default function SettingsPage() {
             { id: 'geral', label: 'Gerais', icon: ImageIcon },
             { id: 'bancos', label: 'Bancos', icon: Building2 },
             { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
-            { id: 'status', label: 'Status Leads', icon: Activity },
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
+            { id: 'status', label: 'Status Leads', icon: Activity }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -468,42 +465,6 @@ export default function SettingsPage() {
                   </div>
                 </SortableContext>
               </DndContext>
-            </div>
-          )}
-
-          {activeTab === 'dashboard' && (
-            <div className="glass-panel p-6 rounded-2xl animate-in fade-in duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white flex items-center gap-2">
-                  <LayoutDashboard size={20} className="text-emerald-500" /> Configuração dos Cards do Dashboard
-                </h3>
-              </div>
-              <p className="text-sm text-slate-500 mb-8">Personalize os nomes exibidos nos cards do topo do CRM.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(Object.keys(dashboardCards) as Array<keyof typeof dashboardCards>).map((key) => (
-                  <div key={key} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <label className="text-[10px] font-black text-slate-400 uppercase px-1 block mb-2">
-                      Card: {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={dashboardCards[key].label} 
-                        onChange={(e) => updateDashboardCard(key, e.target.value)}
-                        placeholder="Nome do card..." 
-                        className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-bold shadow-sm" 
-                      />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase w-full mb-1">Status Vinculados:</span>
-                      {dashboardCards[key].statuses.map(st => (
-                        <span key={st} className="text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded font-bold">{st}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
