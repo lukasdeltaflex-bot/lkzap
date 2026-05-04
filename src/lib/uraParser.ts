@@ -112,9 +112,14 @@ export function parseUraText(text: string): UraParseResult {
     }
   }
 
-  // Prepend 55 if not present and has 10/11 digits
-  if (telefone.length === 10 || telefone.length === 11) {
-    telefone = '55' + telefone;
+  // Strip country code 55 if it was captured
+  if ((telefone.length === 13 || telefone.length === 12) && telefone.startsWith('55')) {
+    telefone = telefone.slice(2);
+  }
+
+  // If 10 digits (DDD + 8 digits), insert the 9 after the DDD
+  if (telefone.length === 10) {
+    telefone = telefone.slice(0, 2) + '9' + telefone.slice(2);
   }
 
   const campanha = extractLineRegex(['Campanha', 'CAMPANHA', 'Campaign']);
