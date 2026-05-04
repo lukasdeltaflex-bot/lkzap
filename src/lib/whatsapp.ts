@@ -31,5 +31,5 @@ export const generateReabordagemLink = (lead: Lead, templateContent?: string): s
   const encodedText = encodeURIComponent(text);
   const cleanPhone = normalizePhone(lead.phone);
 
-  return `https://wa.me/${cleanPhone}?text=${encoded}`;
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
