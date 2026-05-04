@@ -79,7 +79,7 @@ export default function SettingsPage() {
   } = useSettingsStore();
 
   // Navigation state
-  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status'>('geral');
   
   // Local form states
   const [newBank, setNewBank] = useState("");
@@ -199,8 +199,7 @@ export default function SettingsPage() {
             { id: 'geral', label: 'Gerais', icon: ImageIcon },
             { id: 'bancos', label: 'Bancos', icon: Building2 },
             { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
-            { id: 'status', label: 'Status Leads', icon: Activity },
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
+            { id: 'status', label: 'Status Leads', icon: Activity }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -472,81 +471,6 @@ export default function SettingsPage() {
                   </div>
                 </SortableContext>
               </DndContext>
-            </div>
-          )}
-
-          {activeTab === 'dashboard' && (
-            <div className="glass-panel p-6 rounded-2xl animate-in fade-in duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white flex items-center gap-2">
-                  <LayoutDashboard size={20} className="text-emerald-500" /> Configuração dos Cards do Dashboard
-                </h3>
-              </div>
-              <p className="text-sm text-slate-500 mb-8">Personalize os nomes, a ordem e quais status cada card deve contabilizar.</p>
-
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'dashboard' as any)}>
-                <SortableContext items={dashboardCards} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-4">
-                    {dashboardCards.map((card) => (
-                      <SortableItem key={card.id} id={card.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex gap-4 group transition-all hover:border-emerald-500/30 shadow-sm">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <input 
-                                type="text" 
-                                value={card.label} 
-                                onChange={(e) => updateDashboardCard(card.id, { label: e.target.value })}
-                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-black shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                              />
-                              <button 
-                                onClick={() => updateDashboardCard(card.id, { visible: !card.visible })}
-                                className={`text-[10px] font-black px-2 py-1 rounded transition-colors ${card.visible ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-200 text-slate-500 dark:bg-slate-800'}`}
-                              >
-                                {card.visible ? 'VISÍVEL' : 'OCULTO'}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Status Vinculados (selecione para incluir na contagem):</span>
-                            <div className="flex flex-wrap gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                              {leadStatuses.map(status => {
-                                const isSelected = card.statuses.includes(status.name);
-                                return (
-                                  <button
-                                    key={status.id}
-                                    type="button"
-                                    onClick={() => {
-                                      const newStatuses = isSelected 
-                                        ? card.statuses.filter(s => s !== status.name)
-                                        : [...card.statuses, status.name];
-                                      updateDashboardCard(card.id, { statuses: newStatuses });
-                                    }}
-                                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
-                                      isSelected 
-                                        ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-950/30 shadow-sm' 
-                                        : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-950 dark:border-slate-800 opacity-60 hover:opacity-100'
-                                    }`}
-                                  >
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: status.color }}></div>
-                                    {status.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </SortableItem>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-              
-              <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl">
-                 <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                   💡 <b>Dica:</b> Arraste os cards usando o ícone lateral para mudar a ordem de exibição no Dashboard. Leads que não possuírem status vinculado a nenhum card visível não aparecerão nos resumos.
-                 </p>
-              </div>
             </div>
           )}
         </div>

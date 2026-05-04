@@ -152,11 +152,14 @@ export const LeadTable = () => {
         }
       }
 
-      if (dashboardFilter) {
-        const activeCard = (dashboardCards || []).find(c => c.id === dashboardFilter);
-        if (activeCard) {
-          if (!(activeCard.statuses || []).includes(lead.status)) return false;
-        }
+      if (dashboardFilter === 'ready') {
+        if (!['Com limite', 'Pronto para envio', 'Pronto para enviar'].includes(lead.status)) return false;
+      } else if (dashboardFilter === 'sent') {
+        if (lead.status !== 'Mensagem enviada') return false;
+      } else if (dashboardFilter === 'responded') {
+        if (!['Não respondeu', 'Não quer', 'Reabordar depois', 'Interessado', 'Respondeu'].includes(lead.status)) return false;
+      } else if (dashboardFilter === 'closed') {
+        if (!['Venda realizada', 'Fechado'].includes(lead.status)) return false;
       } else {
         const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;
         const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
