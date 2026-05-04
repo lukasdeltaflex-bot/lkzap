@@ -34,7 +34,7 @@ const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
 
 export const LeadTable = () => {
   const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter } = useLeadStore();
-  const { banks, origins, messageTemplates, leadStatuses } = useSettingsStore();
+  const { banks, origins, messageTemplates, leadStatuses, dashboardCards } = useSettingsStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBank, setFilterBank] = useState('');
@@ -149,14 +149,11 @@ export const LeadTable = () => {
         }
       }
 
-      if (dashboardFilter === 'ready') {
-        if (lead.status !== 'Com limite' || lead.queue !== 'Pronto para enviar') return false;
-      } else if (dashboardFilter === 'sent') {
-        if (lead.status !== 'Mensagem enviada') return false;
-      } else if (dashboardFilter === 'responded') {
-        if (lead.lastAction !== 'Respondeu' && lead.lastAction !== 'Interessado') return false;
-      } else if (dashboardFilter === 'closed') {
-        if (lead.status !== 'Fechado') return false;
+      if (dashboardFilter) {
+        const activeCard = dashboardCards.find(c => c.id === dashboardFilter);
+        if (activeCard) {
+          if (!activeCard.statuses.includes(lead.status)) return false;
+        }
       } else {
         const matchesStatus = appliedFilters.status === '' || lead.status === appliedFilters.status;
         const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
