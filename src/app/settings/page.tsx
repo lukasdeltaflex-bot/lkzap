@@ -81,8 +81,6 @@ export default function SettingsPage() {
   // Navigation state
   const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
   
-  if (!dashboardCards) return <div className="p-20 text-center">Carregando configurações...</div>;
-
   // Local form states
   const [newBank, setNewBank] = useState("");
   const [newOrigin, setNewOrigin] = useState("");

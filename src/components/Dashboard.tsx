@@ -30,10 +30,6 @@ export const Dashboard = () => {
     return () => clearInterval(interval);
   }, [leads, resetSendsIfNewDay, runAutoRules]);
 
-  if (!dashboardCards || !dashboardCards.ready) {
-    return <div className="h-32 flex items-center justify-center">Carregando...</div>;
-  }
-
   // Counts derived from actual lead statuses using central config from settings store
   const readyLeadsCount = leads.filter(l => dashboardCards.ready.statuses.includes(l.status)).length;
   const sentLeadsCount = leads.filter(l => dashboardCards.sent.statuses.includes(l.status)).length;
