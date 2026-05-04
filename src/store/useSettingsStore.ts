@@ -22,6 +22,8 @@ interface SettingsStore {
   
   // Actions
   updateDashboardCard: (id: string, data: Partial<DashboardCardConfig>) => void;
+  addDashboardCard: () => void;
+  removeDashboardCard: (id: string) => void;
   reorderDashboardCards: (cards: DashboardCardConfig[]) => void;
   addBank: (name: string, logo?: string) => void;
   updateBank: (id: string, data: Partial<Bank>) => void;
@@ -118,6 +120,29 @@ export const useSettingsStore = create<SettingsStore>()(
 
       updateDashboardCard: (id, data) => set((state) => ({
         dashboardCards: (state.dashboardCards || DEFAULT_DASHBOARD_CARDS).map(c => c.id === id ? { ...c, ...data } : c)
+      })),
+
+      addDashboardCard: () => set((state) => {
+        const currentCards = state.dashboardCards || [];
+        const nextOrder = currentCards.length > 0 
+          ? Math.max(...currentCards.map(c => c.order)) + 1 
+          : 1;
+        const firstStatus = state.leadStatuses[0]?.name || "Novo";
+        
+        const newCard: DashboardCardConfig = {
+          id: crypto.randomUUID(),
+          label: "Novo card",
+          statusName: firstStatus,
+          visible: true,
+          order: nextOrder,
+          color: "blue"
+        };
+        
+        return { dashboardCards: [...currentCards, newCard] };
+      }),
+
+      removeDashboardCard: (id) => set((state) => ({
+        dashboardCards: (state.dashboardCards || []).filter(c => c.id !== id)
       })),
 
       reorderDashboardCards: (cards) => set({ dashboardCards: cards }),

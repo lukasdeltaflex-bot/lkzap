@@ -98,7 +98,9 @@ export default function SettingsPage() {
     reorderTemplates,
     setLogo,
     updateDashboardCard,
-    reorderDashboardCards
+    reorderDashboardCards,
+    addDashboardCard,
+    removeDashboardCard
   } = useSettingsStore();
 
   // Navigation state
@@ -511,50 +513,74 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white flex items-center gap-2">
                   <LayoutDashboard size={20} className="text-emerald-500" /> Configuração dos Cards do Dashboard
                 </h3>
+                <button 
+                  onClick={() => addDashboardCard()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition-transform active:scale-95 flex items-center gap-1.5"
+                >
+                  <Plus size={14} /> Adicionar card
+                </button>
               </div>
               <p className="text-sm text-slate-500 mb-8">Personalize os nomes, a ordem e qual status cada card deve contabilizar.</p>
 
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'dashboard')}>
-                <SortableContext items={(dashboardCards || []).map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-4">
-                    {(dashboardCards || []).map((card) => (
-                      <SortableItem key={card.id} id={card.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex gap-4 group transition-all hover:border-emerald-500/30 shadow-sm">
-                        <div className="flex-1">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                            <div className="flex items-center gap-3">
-                              <input 
-                                type="text" 
-                                value={card.label} 
-                                onChange={(e) => updateDashboardCard(card.id, { label: e.target.value })}
-                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-black shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                              />
-                              <button 
-                                onClick={() => updateDashboardCard(card.id, { visible: !card.visible })}
-                                className={`text-[10px] font-black px-2 py-1 rounded transition-colors ${card.visible ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-200 text-slate-500 dark:bg-slate-800'}`}
-                              >
-                                {card.visible ? 'VISÍVEL' : 'OCULTO'}
-                              </button>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
-                              <select 
-                                value={card.statusName}
-                                onChange={(e) => updateDashboardCard(card.id, { statusName: e.target.value })}
-                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                              >
-                                {leadStatuses.map(s => (
-                                  <option key={s.id} value={s.name}>{s.name}</option>
-                                ))}
-                              </select>
+              {(dashboardCards || []).length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                  <LayoutDashboard size={40} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-slate-500 font-medium">Nenhum card configurado. Clique em Adicionar card para criar um novo.</p>
+                </div>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'dashboard')}>
+                  <SortableContext items={(dashboardCards || []).map(c => c.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {(dashboardCards || []).map((card) => (
+                        <SortableItem key={card.id} id={card.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex gap-4 group transition-all hover:border-emerald-500/30 shadow-sm">
+                          <div className="flex-1">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                              <div className="flex items-center gap-3">
+                                <input 
+                                  type="text" 
+                                  value={card.label} 
+                                  onChange={(e) => updateDashboardCard(card.id, { label: e.target.value })}
+                                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-black shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                />
+                                <button 
+                                  onClick={() => updateDashboardCard(card.id, { visible: !card.visible })}
+                                  className={`text-[10px] font-black px-2 py-1 rounded transition-colors ${card.visible ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-slate-200 text-slate-500 dark:bg-slate-800'}`}
+                                >
+                                  {card.visible ? 'VISÍVEL' : 'OCULTO'}
+                                </button>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
+                                <select 
+                                  value={card.statusName}
+                                  onChange={(e) => updateDashboardCard(card.id, { statusName: e.target.value })}
+                                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                                >
+                                  {leadStatuses.map(s => (
+                                    <option key={s.id} value={s.name}>{s.name}</option>
+                                  ))}
+                                </select>
+                                <button 
+                                  onClick={() => {
+                                    if(confirm('Deseja excluir este card? Esta ação não afetará os leads.')) {
+                                      removeDashboardCard(card.id);
+                                    }
+                                  }}
+                                  className="ml-2 text-slate-300 hover:text-red-500 transition-colors p-1"
+                                  title="Excluir card"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </SortableItem>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                        </SortableItem>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
               
               <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl">
                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
