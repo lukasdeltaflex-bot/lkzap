@@ -42,7 +42,7 @@ export const Dashboard = () => {
     }, 60000 * 5);
     
     return () => clearInterval(interval);
-  }, [leads, resetSendsIfNewDay, runAutoRules]);
+  }, []); // Run only once on mount
 
   if (!hydrated) return null;
 
