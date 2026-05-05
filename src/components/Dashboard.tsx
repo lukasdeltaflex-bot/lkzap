@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore, DashboardCardConfig } from '../store/useSettingsStore';
+import { Lead, LeadStatusConfig } from '../types';
 import { Users, Send, MessageCircleReply, CheckCircle, LucideIcon } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -44,8 +45,8 @@ export const Dashboard = () => {
     : DEFAULT_FALLBACK_CARDS;
 
   const visibleCards = cardsToRender
-    .filter(c => c.visible)
-    .sort((a, b) => a.order - b.order);
+    .filter((c: DashboardCardConfig) => c.visible)
+    .sort((a: DashboardCardConfig, b: DashboardCardConfig) => a.order - b.order);
 
   const toggleFilter = (cardStatusName: string) => {
     if (dashboardFilter === cardStatusName) {
@@ -63,11 +64,11 @@ export const Dashboard = () => {
           <p className="text-slate-500 font-medium">Nenhum card configurado para exibição.</p>
         </div>
       ) : (
-        visibleCards.map((card) => {
-          const statusConfig = (leadStatuses || []).find(s => s.name === card.statusName);
+        visibleCards.map((card: DashboardCardConfig) => {
+          const statusConfig = (leadStatuses || []).find((s: LeadStatusConfig) => s.name === card.statusName);
           const statusColor = statusConfig?.color || '#94a3b8';
           const Icon = ICON_MAP[card.color || 'blue'] || Users;
-          const count = (leads || []).filter(l => l.status === card.statusName).length;
+          const count = (leads || []).filter((l: Lead) => l.status === card.statusName).length;
           const isActive = dashboardFilter === card.statusName;
 
           return (

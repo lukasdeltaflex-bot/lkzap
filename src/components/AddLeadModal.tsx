@@ -5,7 +5,7 @@ import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
 import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatBRL, parseBRL } from '../lib/utils';
-import { Lead } from '../types';
+import { Lead, LeadStatusConfig, Bank } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -22,10 +22,19 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
   const [bank, setBank] = useState<string>(banks.length > 0 ? (typeof banks[0] === 'string' ? banks[0] : banks[0].name) : '');
   const [origin, setOrigin] = useState<string>(origins.length > 0 ? origins[0] : '');
   const [value, setValue] = useState('');
-  const [status, setStatus] = useState<string>(leadStatuses.find(s => s.name === 'Com limite')?.name || leadStatuses[0]?.name || '');
+  const [status, setStatus] = useState<string>(leadStatuses.find((s: LeadStatusConfig) => s.name === 'Com limite')?.name || leadStatuses[0]?.name || '');
+  const [notes, setNotes] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
-  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseBRL(value) > 0 && bank && origin && status;
+  const canSubmit = name.length > 2 && 
+                    cpf.replace(/\D/g, '').length === 11 && 
+                    validateCPF(cpf) && 
+                    phone.replace(/\D/g, "").length >= 10 && 
+                    (parseBRL(value) > 0 || origin.includes('URA')) && 
+                    bank && 
+                    origin && 
+                    status;
 
   if (!isOpen) return null;
 
@@ -50,6 +59,8 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
       status,
       queue: 'Pronto para enviar',
       lastAction: 'Nunca chamado',
+      notes,
+      tags: selectedTags
     });
 
     // reset and close
@@ -59,6 +70,8 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
     setBank(banks.length > 0 ? (typeof banks[0] === 'string' ? banks[0] : banks[0].name) : '');
     setOrigin(origins.length > 0 ? origins[0] : '');
     setValue('');
+    setNotes('');
+    setSelectedTags([]);
     onClose();
   };
 
@@ -103,23 +116,23 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Origem</label>
-              <select required value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                {origins.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-            <div>
-               <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Status Inicial</label>
-               <select required value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black">
-                 {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-               </select>
-            </div>
+                <select required value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Status Inicial</label>
+                 <select required value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black">
+                   {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                 </select>
+              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Banco</label>
               <select required value={bank} onChange={e => setBank(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                {banks.map(b => (
+                {banks.map((b: Bank) => (
                   <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
                     {typeof b === 'string' ? b : b.name}
                   </option>
@@ -130,6 +143,45 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Valor (R$)</label>
               <input required type="text" value={value} onChange={e => setValue(formatBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-600" placeholder="R$ 0,00" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Tags Rápidas</label>
+            <div className="flex flex-wrap gap-2 p-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
+              {useSettingsStore.getState().tags.map((tag: any) => {
+                const isSelected = selectedTags.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTags(prev => 
+                        prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                      );
+                    }}
+                    style={{ 
+                      backgroundColor: isSelected ? tag.color : 'transparent',
+                      borderColor: isSelected ? tag.color : '#cbd5e1',
+                      color: isSelected ? '#fff' : tag.color
+                    }}
+                    className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all"
+                  >
+                    {tag.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Observações</label>
+            <textarea 
+              rows={2} 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)} 
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
+              placeholder="Notas internas sobre o cliente..."
+            />
           </div>
 
           <div className="pt-4 flex gap-3">

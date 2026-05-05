@@ -5,7 +5,7 @@ import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
 import { normalizeCPF, normalizePhone, validateCPF, formatCPF, formatBRL, parseBRL, formatDisplayPhone } from '../lib/utils';
-import { Lead, LeadStatus, LeadQueue } from '../types';
+import { Lead, LeadStatus, LeadQueue, Bank, LeadStatusConfig, MessageTemplate, Tabulation, Tag } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +26,8 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
   const [status, setStatus] = useState<LeadStatus>('');
   const [queue, setQueue] = useState<LeadQueue>('Pronto para enviar');
   const [templateId, setTemplateId] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (lead) {
@@ -38,13 +40,22 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       setStatus(lead.status);
       setQueue(lead.queue);
       setTemplateId(lead.selectedTemplateId || '');
+      setNotes(lead.notes || '');
+      setSelectedTags(lead.tags || []);
     }
   }, [lead]);
 
   if (!isOpen || !lead) return null;
 
   const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
-  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseBRL(value) > 0 && bank && origin && status;
+  const canSubmit = name.length > 2 && 
+                    cpf.replace(/\D/g, '').length === 11 && 
+                    validateCPF(cpf) && 
+                    phone.replace(/\D/g, "").length >= 10 && 
+                    (parseBRL(value) > 0 || origin.includes('URA')) && 
+                    bank && 
+                    origin && 
+                    status;
 
   function formatPhoneInput(val: string) {
     const digits = val.replace(/\D/g, "");
@@ -68,7 +79,9 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       availableValue: parseBRL(value),
       status,
       queue,
-      selectedTemplateId: templateId || undefined
+      selectedTemplateId: templateId || undefined,
+      notes,
+      tags: selectedTags
     });
 
     onClose();
@@ -104,7 +117,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
             <div>
               <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Banco</label>
               <select required value={bank} onChange={e => setBank(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
-                {banks.map(b => (
+                {banks.map((b: Bank) => (
                   <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
                     {typeof b === 'string' ? b : b.name}
                   </option>
@@ -120,14 +133,14 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
             <div>
               <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Origem</label>
               <select required value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
-                {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
 
             <div>
               <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Status</label>
               <select required value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
-                {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </div>
 
@@ -136,17 +149,57 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
               <select required value={queue} onChange={e => setQueue(e.target.value as LeadQueue)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="Pronto para enviar">Pronto para enviar</option>
                 <option value="Aguardando">Aguardando</option>
+                <option value="Higienização">Higienização</option>
                 <option value="Frio">Frio</option>
                 <option value="Reabordar">Reabordar</option>
               </select>
             </div>
 
             <div className="md:col-span-2">
+              <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Tags Rápidas</label>
+              <div className="flex flex-wrap gap-2 p-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/30">
+                {useSettingsStore.getState().tags.map((tag: Tag) => {
+                  const isSelected = selectedTags.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTags(prev => 
+                          prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                        );
+                      }}
+                      style={{ 
+                        backgroundColor: isSelected ? tag.color : 'transparent',
+                        borderColor: isSelected ? tag.color : '#cbd5e1',
+                        color: isSelected ? '#fff' : tag.color
+                      }}
+                      className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all"
+                    >
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Observações/Notas do Cliente</label>
+              <textarea 
+                rows={3} 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                placeholder="Ex: Cliente pediu retorno amanhã, não atende, falar com filho..."
+              />
+            </div>
+
+            <div className="md:col-span-2">
               <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Mensagem/Tabulação</label>
               <select value={templateId} onChange={e => setTemplateId(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="">Padrão do Sistema</option>
-                {messageTemplates.map(tmpl => (
-                  <option key={tmpl.id} value={tmpl.id}>{tmpl.name} ({tabulations.find(t=>t.id===tmpl.tabId)?.name})</option>
+                {messageTemplates.map((tmpl: MessageTemplate) => (
+                  <option key={tmpl.id} value={tmpl.id}>{tmpl.name} ({tabulations.find((t: Tabulation)=>t.id===tmpl.tabId)?.name})</option>
                 ))}
               </select>
             </div>

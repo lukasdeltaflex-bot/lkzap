@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { differenceInDays, isSameDay, parseISO } from 'date-fns';
-import { Lead } from '../types';
+import { Lead, HistoryEntry } from '../types';
+import { db, auth } from '../lib/firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDocs, 
+  deleteDoc,
+  query,
+  orderBy,
+  onSnapshot
+} from 'firebase/firestore';
 
 interface LeadStore {
   leads: Lead[];
@@ -21,6 +32,8 @@ interface LeadStore {
   getNextMessageAndRotate: () => number;
   runAutoRules: () => void;
   resetSendsIfNewDay: () => void;
+  syncLeads: () => Promise<void>;
+  setLeads: (leads: Lead[]) => void;
 }
 
 export const useLeadStore = create<LeadStore>()(
@@ -35,26 +48,74 @@ export const useLeadStore = create<LeadStore>()(
 
       setDashboardFilter: (filter) => set({ dashboardFilter: filter }),
 
-      addLead: (leadData) => set((state) => ({
-        leads: [{ ...leadData, id: crypto.randomUUID() }, ...state.leads]
-      })),
+      addLead: (leadData) => set((state) => {
+        const newLead: Lead = { 
+          ...leadData, 
+          id: crypto.randomUUID(),
+          history: [{ action: 'Lead criado', createdAt: new Date().toISOString() }]
+        };
+        
+        // Async push to firestore if logged in
+        if (auth?.currentUser && db) {
+          const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, newLead.id);
+          setDoc(leadRef, newLead).catch(console.error);
+        }
+
+        return {
+          leads: [newLead, ...state.leads]
+        };
+      }),
 
       updateLead: (id, data) => set((state) => ({
         leads: state.leads.map(lead => {
           if (lead.id === id) {
             const updatedData = { ...data };
-            if (updatedData.availableValue !== undefined && updatedData.availableValue !== lead.availableValue) {
+            const history: HistoryEntry[] = [...(lead.history || [])];
+            
+            // Record significant changes in history
+            if (data.availableValue !== undefined && data.availableValue !== lead.availableValue) {
               updatedData.availableValueUpdatedAt = new Date().toISOString();
+              history.push({ 
+                action: `Valor alterado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.availableValue)} -> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.availableValue)}`, 
+                createdAt: new Date().toISOString() 
+              });
             }
-            return { ...lead, ...updatedData };
+            if (data.status && data.status !== lead.status) {
+              history.push({ action: `Status alterado: ${lead.status} -> ${data.status}`, createdAt: new Date().toISOString() });
+            }
+            if (data.bank && data.bank !== lead.bank) {
+              history.push({ action: `Banco alterado: ${lead.bank} -> ${data.bank}`, createdAt: new Date().toISOString() });
+            }
+            if (data.queue && data.queue !== lead.queue) {
+              history.push({ action: `Fila alterada: ${lead.queue} -> ${data.queue}`, createdAt: new Date().toISOString() });
+            }
+            if (data.lastSendDate && data.lastSendDate !== lead.lastSendDate) {
+              history.push({ action: 'Mensagem enviada', createdAt: new Date().toISOString() });
+            }
+
+            const finalLead = { ...lead, ...updatedData, history };
+            
+            // Sync to firestore
+            if (auth?.currentUser && db) {
+              const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, id);
+              setDoc(leadRef, finalLead).catch(console.error);
+            }
+
+            return finalLead;
           }
           return lead;
         })
       })),
 
-      deleteLead: (id) => set((state) => ({
-        leads: state.leads.filter(lead => lead.id !== id)
-      })),
+      deleteLead: (id) => set((state) => {
+        if (auth?.currentUser && db) {
+          const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, id);
+          deleteDoc(leadRef).catch(console.error);
+        }
+        return {
+          leads: state.leads.filter(lead => lead.id !== id)
+        };
+      }),
 
       incrementSendsToday: () => set((state) => {
         const today = new Date().toISOString();
@@ -108,7 +169,33 @@ export const useLeadStore = create<LeadStore>()(
           return { sendsTodayCount: 0, lastSendDate: new Date().toISOString() };
         }
         return state;
-      })
+      }),
+
+      setLeads: (leads) => set({ leads }),
+
+      syncLeads: async () => {
+        if (!auth?.currentUser || !db) return;
+        const leadsRef = collection(db, `users/${auth.currentUser.uid}/leads`);
+        try {
+          const snapshot = await getDocs(leadsRef);
+          const firestoreLeads = snapshot.docs.map(doc => doc.data() as Lead);
+          
+          if (firestoreLeads.length > 0) {
+            set({ leads: firestoreLeads });
+          } else {
+            // If firestore is empty but local has leads, push local to firestore
+            const localLeads = get().leads;
+            if (localLeads.length > 0) {
+              for (const lead of localLeads) {
+                const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, lead.id);
+                await setDoc(leadRef, lead);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao sincronizar leads:", error);
+        }
+      }
     }),
     {
       name: 'lkzap-leads-storage',

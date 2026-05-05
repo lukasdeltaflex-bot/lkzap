@@ -6,6 +6,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { X, Zap, AlertTriangle, CheckCircle2, ClipboardPaste } from 'lucide-react';
 import { parseUraText, UraParseResult } from '../lib/uraParser';
 import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatBRL, parseBRL } from '../lib/utils';
+import { LeadStatusConfig, Bank } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -58,8 +59,8 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
     setValue(''); // Let it be 0 implicitly or visually empty
     
     // Status handling
-    const hasNovoUra = leadStatuses.some(s => s.name === 'Novo da URA');
-    const hasAguardando = leadStatuses.some(s => s.name === 'Aguardando consulta');
+    const hasNovoUra = leadStatuses.some((s: LeadStatusConfig) => s.name === 'Novo da URA');
+    const hasAguardando = leadStatuses.some((s: LeadStatusConfig) => s.name === 'Aguardando consulta');
     let defaultStatus = 'Novo';
     if (hasNovoUra) defaultStatus = 'Novo da URA';
     else if (hasAguardando) defaultStatus = 'Aguardando consulta';
@@ -99,11 +100,12 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
       bank,
       origin,
       availableValue: parseBRL(value) || 0,
-      consultDate: '', // Data de consulta vazia/null como solicitado
+      consultDate: new Date().toISOString(), 
       status,
-      queue: 'Aguardando', // Fila inicial deve ser Aguardando
+      queue: 'Higienização', // Fila inicial deve ser Higienização para URA
       lastAction: 'Nunca chamado',
-      observations,
+      notes: observations,
+      tags: [] // Can add default URA tag if exists
     });
 
     // Reset and close
@@ -226,7 +228,7 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Banco</label>
                 <select value={bank} onChange={e => setBank(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold">
                   <option value="">Selecione</option>
-                  {banks.map(b => (
+                  {banks.map((b: Bank) => (
                     <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
                       {typeof b === 'string' ? b : b.name}
                     </option>
@@ -243,14 +245,14 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Origem</label>
                 <select value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold">
                   {origins.includes(origin) ? null : <option value={origin}>{origin}</option>}
-                  {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                  {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Status</label>
                 <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-black">
-                  {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
 

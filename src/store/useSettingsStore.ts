@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Bank, MessageTemplate, Tabulation, LeadStatusConfig } from '../types';
+import { Bank, MessageTemplate, Tabulation, LeadStatusConfig, Tag } from '../types';
+import { db, auth } from '../lib/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export interface DashboardCardConfig {
   id: string;
@@ -17,6 +19,7 @@ interface SettingsStore {
   tabulations: Tabulation[];
   messageTemplates: MessageTemplate[];
   leadStatuses: LeadStatusConfig[];
+  tags: Tag[];
   logoBase64: string | null;
   dashboardCards: DashboardCardConfig[];
   
@@ -46,12 +49,17 @@ interface SettingsStore {
   removeLeadStatus: (id: string) => void;
   reorderLeadStatuses: (statuses: LeadStatusConfig[]) => void;
   
+  addTag: (label: string, color: string) => void;
+  updateTag: (id: string, data: Partial<Tag>) => void;
+  removeTag: (id: string) => void;
+  
   reorderBanks: (banks: Bank[]) => void;
   reorderOrigins: (origins: string[]) => void;
   reorderTabulations: (tabulations: Tabulation[]) => void;
   reorderTemplates: (templates: MessageTemplate[]) => void;
   
   setLogo: (base64: string | null) => void;
+  syncSettings: () => Promise<void>;
 }
 
 const DEFAULT_BANKS: Bank[] = [
@@ -96,6 +104,17 @@ const DEFAULT_STATUSES: LeadStatusConfig[] = [
   { id: 'st-10', name: 'Falecido', color: '#4b5563', active: true },
   { id: 'st-11', name: 'Número inválido', color: '#f97316', active: true },
   { id: 'st-12', name: 'Reabordar depois', color: '#8b5cf6', active: true },
+  { id: 'st-13', name: 'Novo da URA', color: '#f59e0b', active: true },
+  { id: 'st-14', name: 'Aguardando consulta', color: '#6366f1', active: true },
+];
+
+const DEFAULT_TAGS: Tag[] = [
+  { id: 'tag-1', label: '🔥 Quente', color: '#ef4444' },
+  { id: 'tag-2', label: '❄️ Frio', color: '#3b82f6' },
+  { id: 'tag-3', label: '⚠️ Conferir CPF', color: '#f59e0b' },
+  { id: 'tag-4', label: '⏰ Retornar', color: '#8b5cf6' },
+  { id: 'tag-5', label: '💰 Possui saque', color: '#10b981' },
+  { id: 'tag-6', label: '🚫 Não quer', color: '#dc2626' },
 ];
 
 const DEFAULT_ORIGINS = ['URA Reversa', 'Lista própria', 'Arquivo TXT', 'Excel', 'Indicação', 'Outro'];
@@ -109,12 +128,24 @@ const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
-    (set) => ({
+    (set, get) => {
+      const pushSettings = async (data: any) => {
+        if (!auth?.currentUser || !db) return;
+        const settingsRef = doc(db, `users/${auth.currentUser.uid}/settings`, 'config');
+        try {
+          await setDoc(settingsRef, data, { merge: true });
+        } catch (e) {
+          console.error("Error pushing settings:", e);
+        }
+      };
+
+      return {
       banks: DEFAULT_BANKS,
       origins: DEFAULT_ORIGINS,
       tabulations: DEFAULT_TABULATIONS,
       messageTemplates: DEFAULT_TEMPLATES,
       leadStatuses: DEFAULT_STATUSES,
+      tags: DEFAULT_TAGS,
       logoBase64: null,
       dashboardCards: DEFAULT_DASHBOARD_CARDS,
 
@@ -208,14 +239,64 @@ export const useSettingsStore = create<SettingsStore>()(
         leadStatuses: state.leadStatuses.filter(s => s.id !== id)
       })),
       reorderLeadStatuses: (statuses) => set({ leadStatuses: statuses }),
+      
+      addTag: (label, color) => set((state) => ({
+        tags: [...(state.tags || []), { id: crypto.randomUUID(), label, color }]
+      })),
+      updateTag: (id, data) => set((state) => ({
+        tags: (state.tags || []).map(t => t.id === id ? { ...t, ...data } : t)
+      })),
+      removeTag: (id) => set((state) => ({
+        tags: (state.tags || []).filter(t => t.id !== id)
+      })),
 
       reorderBanks: (banks) => set({ banks }),
       reorderOrigins: (origins) => set({ origins }),
       reorderTabulations: (tabulations) => set({ tabulations }),
       reorderTemplates: (messageTemplates) => set({ messageTemplates }),
 
-      setLogo: (base64) => set({ logoBase64: base64 })
-    }),
+      setLogo: (base64) => {
+        set({ logoBase64: base64 });
+        pushSettings({ logoBase64: base64 });
+      },
+
+      syncSettings: async () => {
+        if (!auth?.currentUser || !db) return;
+        const settingsRef = doc(db, `users/${auth.currentUser.uid}/settings`, 'config');
+        try {
+          const snapshot = await getDoc(settingsRef);
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            set({
+              banks: data.banks || DEFAULT_BANKS,
+              origins: data.origins || DEFAULT_ORIGINS,
+              tabulations: data.tabulations || DEFAULT_TABULATIONS,
+              messageTemplates: data.messageTemplates || DEFAULT_TEMPLATES,
+              leadStatuses: data.leadStatuses || DEFAULT_STATUSES,
+              tags: data.tags || DEFAULT_TAGS,
+              logoBase64: data.logoBase64 || null,
+              dashboardCards: data.dashboardCards || DEFAULT_DASHBOARD_CARDS
+            });
+          } else {
+            // Push local settings to firestore if firestore is empty
+            const state = get();
+            pushSettings({
+              banks: state.banks,
+              origins: state.origins,
+              tabulations: state.tabulations,
+              messageTemplates: state.messageTemplates,
+              leadStatuses: state.leadStatuses,
+              tags: state.tags,
+              logoBase64: state.logoBase64,
+              dashboardCards: state.dashboardCards
+            });
+          }
+        } catch (e) {
+          console.error("Error syncing settings:", e);
+        }
+      }
+    };
+  },
     {
       name: 'lkzap-settings-storage',
       version: 1,
@@ -236,6 +317,9 @@ export const useSettingsStore = create<SettingsStore>()(
         }
         if (!persistedState.dashboardCards) {
           persistedState.dashboardCards = DEFAULT_DASHBOARD_CARDS;
+        }
+        if (!persistedState.tags) {
+          persistedState.tags = DEFAULT_TAGS;
         }
         return persistedState;
       }

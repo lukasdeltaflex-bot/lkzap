@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Firebase initialization with environment variables verified on 2026-04-27
 const firebaseConfig = {
@@ -19,6 +20,7 @@ const app = (getApps().length > 0)
   : (isConfigValid ? initializeApp(firebaseConfig) : null);
 
 // auth will be null if not initialized, handle in components
-const auth: any = app ? getAuth(app) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
 
-export { auth };
+export { auth, db };

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useSettingsStore, DashboardCardConfig } from "../../store/useSettingsStore";
+import { Bank, LeadStatusConfig, Tabulation, MessageTemplate } from "../../types";
 import { 
   Building2, 
   Plus, 
@@ -134,29 +135,30 @@ export default function SettingsPage() {
 
     if (over && active.id !== over.id) {
       if (type === 'banks') {
-        const oldIndex = banks.findIndex(b => b.id === active.id);
-        const newIndex = banks.findIndex(b => b.id === over.id);
+        const oldIndex = banks.findIndex((b: Bank) => b.id === active.id);
+        const newIndex = banks.findIndex((b: Bank) => b.id === over.id);
         reorderBanks(arrayMove(banks, oldIndex, newIndex));
       } else if (type === 'origins') {
         const oldIndex = origins.indexOf(active.id as string);
         const newIndex = origins.indexOf(over.id as string);
         reorderOrigins(arrayMove(origins, oldIndex, newIndex));
       } else if (type === 'tabulations') {
-        const oldIndex = tabulations.findIndex(t => t.id === active.id);
-        const newIndex = tabulations.findIndex(t => t.id === over.id);
+        const oldIndex = tabulations.findIndex((t: Tabulation) => t.id === active.id);
+        const newIndex = tabulations.findIndex((t: Tabulation) => t.id === over.id);
         reorderTabulations(arrayMove(tabulations, oldIndex, newIndex));
       } else if (type === 'templates') {
-        const oldIndex = messageTemplates.findIndex(t => t.id === active.id);
-        const newIndex = messageTemplates.findIndex(t => t.id === over.id);
+        const oldIndex = messageTemplates.findIndex((t: MessageTemplate) => t.id === active.id);
+        const newIndex = messageTemplates.findIndex((t: MessageTemplate) => t.id === over.id);
         reorderTemplates(arrayMove(messageTemplates, oldIndex, newIndex));
       } else if (type === 'status') {
-        const oldIndex = leadStatuses.findIndex(s => s.id === active.id);
-        const newIndex = leadStatuses.findIndex(s => s.id === over.id);
+        const oldIndex = leadStatuses.findIndex((s: LeadStatusConfig) => s.id === active.id);
+        const newIndex = leadStatuses.findIndex((s: LeadStatusConfig) => s.id === over.id);
         reorderLeadStatuses(arrayMove(leadStatuses, oldIndex, newIndex));
       } else if (type === 'dashboard') {
-        const oldIndex = dashboardCards.findIndex(c => c.id === active.id);
-        const newIndex = dashboardCards.findIndex(c => c.id === over.id);
-        const newCards = arrayMove(dashboardCards, oldIndex, newIndex).map((card, idx) => ({
+        const oldIndex = dashboardCards.findIndex((c: DashboardCardConfig) => c.id === active.id);
+        const newIndex = dashboardCards.findIndex((c: DashboardCardConfig) => c.id === over.id);
+        const movedCards = arrayMove(dashboardCards, oldIndex, newIndex) as DashboardCardConfig[];
+        const newCards = movedCards.map((card: DashboardCardConfig, idx: number) => ({
           ...card,
           order: idx + 1
         }));
@@ -268,7 +270,7 @@ export default function SettingsPage() {
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'origins')}>
                     <SortableContext items={origins} strategy={verticalListSortingStrategy}>
                       <div className="space-y-2">
-                        {origins.map(origin => (
+                        {origins.map((origin: string) => (
                           <SortableItem key={origin} id={origin} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-emerald-500/30 transition-all">
                             <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{origin}</span>
                             <button onClick={() => removeOrigin(origin)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -307,9 +309,9 @@ export default function SettingsPage() {
               </div>
 
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'banks')}>
-                <SortableContext items={banks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={banks.map((b: Bank) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {banks.map(bank => (
+                    {banks.map((bank: Bank) => (
                       <SortableItem key={bank.id} id={bank.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-emerald-500/30 transition-all">
                         <div className="flex-1 flex items-center gap-4">
                           {/* Bank Logo / Fallback */}
@@ -387,9 +389,9 @@ export default function SettingsPage() {
                 </div>
 
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'tabulations')}>
-                  <SortableContext items={tabulations.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={tabulations.map((t: Tabulation) => t.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
-                      {tabulations.map(tab => (
+                      {tabulations.map((tab: Tabulation) => (
                         <SortableItem key={tab.id} id={tab.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-emerald-500/30 transition-all">
                           <input 
                             type="text" 
@@ -428,9 +430,9 @@ export default function SettingsPage() {
                 </div>
 
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'templates')}>
-                  <SortableContext items={messageTemplates.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={messageTemplates.map((t: MessageTemplate) => t.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-4">
-                      {messageTemplates.map(template => (
+                      {messageTemplates.map((template: MessageTemplate) => (
                         <SortableItem key={template.id} id={template.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl block transition-all group hover:border-emerald-500/30">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
@@ -445,7 +447,7 @@ export default function SettingsPage() {
                                 onChange={(e) => updateTemplate(template.id, { tabId: e.target.value })}
                                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500"
                               >
-                                {tabulations.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                {tabulations.map((t: Tabulation) => <option key={t.id} value={t.id}>{t.name}</option>)}
                               </select>
                             </div>
                             <div className="flex items-center gap-2">
@@ -510,9 +512,9 @@ export default function SettingsPage() {
               </div>
 
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'status')}>
-                <SortableContext items={leadStatuses.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={leadStatuses.map((s: LeadStatusConfig) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
-                    {leadStatuses.map(status => (
+                    {leadStatuses.map((status: LeadStatusConfig) => (
                       <SortableItem key={status.id} id={status.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-emerald-500/30 transition-all">
                         <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: status.color }} />
                         <div className="flex-1">
@@ -570,9 +572,9 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, 'dashboard')}>
-                  <SortableContext items={(dashboardCards || []).map(c => c.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={(dashboardCards || []).map((c: DashboardCardConfig) => c.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-4">
-                      {(dashboardCards || []).map((card) => (
+                      {(dashboardCards || []).map((card: DashboardCardConfig) => (
                         <SortableItem key={card.id} id={card.id} className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl flex gap-4 group transition-all hover:border-emerald-500/30 shadow-sm">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -598,7 +600,7 @@ export default function SettingsPage() {
                                   onChange={(e) => updateDashboardCard(card.id, { statusName: e.target.value })}
                                   className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                                 >
-                                  {leadStatuses.map(s => (
+                                  {leadStatuses.map((s: LeadStatusConfig) => (
                                     <option key={s.id} value={s.name}>{s.name}</option>
                                   ))}
                                 </select>

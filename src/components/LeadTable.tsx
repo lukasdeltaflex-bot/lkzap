@@ -5,7 +5,7 @@ import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { generateWhatsAppLink, generateReabordagemLink } from '../lib/whatsapp';
 import { exportToExcel, exportToPDF } from '../lib/export';
-import { Lead } from '../types';
+import { Lead, Bank, LeadStatusConfig, MessageTemplate, Tabulation } from '../types';
 import { formatDisplayPhone, formatCPF, parseBRL, formatBRL, normalizePhone } from '../lib/utils';
 import { 
   MessageCircle, 
@@ -22,9 +22,13 @@ import {
   Copy,
   Check,
   Zap,
-  Clock
+  Clock,
+  History,
+  Tag as TagIcon,
+  MessageSquare,
+  Send
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
 import { UraImportModal } from './UraImportModal';
@@ -56,7 +60,10 @@ export const LeadTable = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isUraModalOpen, setIsUraModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
+  const [previewLead, setPreviewLead] = useState<Lead | null>(null);
   const [now, setNow] = useState(Date.now());
   const [hydrated, setHydrated] = useState(false);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
@@ -77,11 +84,11 @@ export const LeadTable = () => {
   const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
 
   const getBankInfo = (bankName: string) => {
-    return banks.find(b => (typeof b === 'string' ? b : b.name) === bankName);
+    return banks.find((b: Bank) => (typeof b === 'string' ? b : b.name) === bankName);
   };
 
   const getStatusColor = (statusName: string) => {
-    const status = leadStatuses.find(s => s.name === statusName);
+    const status = leadStatuses.find((s: LeadStatusConfig) => s.name === statusName);
     return status?.color || '#94a3b8';
   };
 
@@ -162,7 +169,7 @@ export const LeadTable = () => {
 
       return matchesSearch && matchesBank && matchesOrigin && matchesDate;
     });
-  }, [leads, searchTerm, appliedFilters, dashboardFilter]);
+  }, [leads, searchTerm, appliedFilters, dashboardFilter, leadStatuses, hydrated]);
 
   const applyFilters = () => {
     setDashboardFilter(null);
@@ -205,14 +212,23 @@ export const LeadTable = () => {
      const newVal = parseBRL(valStr);
      if (newVal !== lead.availableValue) {
        updateLead(lead.id, { 
-         availableValue: newVal,
-         availableValueUpdatedAt: new Date().toISOString()
+         availableValue: newVal
        });
      }
   };
 
+  const handleShowHistory = (lead: Lead) => {
+    setCurrentLead(lead);
+    setIsHistoryModalOpen(true);
+  };
+
 
   const handleSendWhatsApp = (lead: Lead) => {
+    setPreviewLead(lead);
+    setIsPreviewModalOpen(true);
+  };
+
+  const confirmSendWhatsApp = (lead: Lead) => {
     if (isCooldownActive) return;
 
     const cleanPhone = normalizePhone(lead.phone);
@@ -222,8 +238,8 @@ export const LeadTable = () => {
     }
 
     const selectedTmplId = lead.selectedTemplateId;
-    const template = messageTemplates.find(t => t.id === selectedTmplId) || 
-                     messageTemplates.find(t => t.isDefault) || 
+    const template = messageTemplates.find((t: MessageTemplate) => t.id === selectedTmplId) || 
+                     messageTemplates.find((t: MessageTemplate) => t.isDefault) || 
                      messageTemplates[0];
 
     const link = generateWhatsAppLink(lead, template.content);
@@ -238,6 +254,7 @@ export const LeadTable = () => {
     setCooldown();
 
     window.open(link, '_blank');
+    setIsPreviewModalOpen(false);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -266,37 +283,67 @@ export const LeadTable = () => {
   };
 
   const handleNextClient = () => {
-    const targetLeads = [...filteredLeads].filter(l => l.status === 'Com limite' && l.queue === 'Pronto para enviar');
-    
-    targetLeads.sort((a, b) => {
-      if (b.availableValue !== a.availableValue) {
-        return b.availableValue - a.availableValue;
-      }
+    const { sendsTodayCount } = useLeadStore.getState();
+    const DAILY_LIMIT = 100; // Suggested limit
+
+    if (sendsTodayCount >= DAILY_LIMIT) {
+      if (!confirm(`Você já enviou ${sendsTodayCount} mensagens hoje. O limite sugerido é ${DAILY_LIMIT}. Deseja continuar?`)) return;
+    }
+
+    // Filter potential candidates from ALL leads, not just filtered ones
+    const allCandidates = leads.filter(l => {
+      const cleanPhone = normalizePhone(l.phone);
+      const hasPhone = cleanPhone && cleanPhone.length >= 11;
+      const isNotClosed = l.status !== 'Fechado' && l.status !== 'Descartado';
+      const isReady = l.queue === 'Pronto para enviar';
+      return hasPhone && isNotClosed && isReady;
+    });
+
+    if (allCandidates.length === 0) {
+      alert("Nenhum cliente disponível na fila 'Pronto para enviar' com telefone válido.");
+      return;
+    }
+
+    // Smart Prioritization:
+    // 1. With updated balance (differenceInDays < 3)
+    // 2. With positive value
+    // 3. By value desc
+    // 4. By most recent consult date
+    allCandidates.sort((a, b) => {
+      const aVal = a.availableValue || 0;
+      const bVal = b.availableValue || 0;
+      
+      const aUpdated = a.availableValueUpdatedAt ? differenceInDays(new Date(), parseISO(a.availableValueUpdatedAt)) < 3 : false;
+      const bUpdated = b.availableValueUpdatedAt ? differenceInDays(new Date(), parseISO(b.availableValueUpdatedAt)) < 3 : false;
+
+      // Priority 1: Updated balance
+      if (aUpdated && !bUpdated) return -1;
+      if (!aUpdated && bUpdated) return 1;
+
+      // Priority 2: Has value
+      if (aVal > 0 && bVal <= 0) return -1;
+      if (aVal <= 0 && bVal > 0) return 1;
+
+      // Priority 3: Value desc
+      if (bVal !== aVal) return bVal - aVal;
+
+      // Priority 4: Consult date desc
       return parseISO(b.consultDate).getTime() - parseISO(a.consultDate).getTime();
     });
 
-    // Find first valid candidate considering phone and template requirements
-    let candidate: Lead | undefined;
-    for (const l of targetLeads) {
-      const cleanPhone = normalizePhone(l.phone);
-      if (!cleanPhone || cleanPhone.length < 11) continue;
+    const candidate = allCandidates[0];
 
-      const selectedTmplId = l.selectedTemplateId;
-      const template = messageTemplates.find(t => t.id === selectedTmplId) || 
-                       messageTemplates.find(t => t.isDefault) || 
-                       messageTemplates[0];
-      // If template requires {valor} ensure lead has availableValue
-      if (template && template.content && template.content.includes('{valor}') && (!l.availableValue || l.availableValue <= 0)) continue;
+    // Final template check
+    const selectedTmplId = candidate.selectedTemplateId;
+    const template = messageTemplates.find((t: MessageTemplate) => t.id === selectedTmplId) || 
+                     messageTemplates.find((t: MessageTemplate) => t.isDefault) || 
+                     messageTemplates[0];
 
-      candidate = l;
-      break;
+    if (template?.content?.includes('{valor}') && (!candidate.availableValue || candidate.availableValue <= 0)) {
+      if (!confirm(`O cliente ${candidate.name} não possui valor informado, mas o template exige {valor}. Deseja continuar mesmo assim?`)) return;
     }
 
-    if (candidate) {
-      handleSendWhatsApp(candidate);
-    } else {
-      alert("Nenhum cliente disponível nos filtros atuais para disparo automático.");
-    }
+    handleSendWhatsApp(candidate);
   };
 
   const columns = ['Nome / Origem','WhatsApp','Banco','Valor','Status / Fila','Ações'];
@@ -355,7 +402,7 @@ export const LeadTable = () => {
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
               <option value="">(Todos)</option>
-              {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
           
@@ -374,7 +421,7 @@ export const LeadTable = () => {
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Banco</label>
             <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
               <option value="">(Todos)</option>
-              {banks.map(bank => (
+              {banks.map((bank: Bank) => (
                 <option key={typeof bank === 'string' ? bank : bank.id} value={typeof bank === 'string' ? bank : bank.name}>{typeof bank === 'string' ? bank : bank.name}</option>
               ))}
             </select>
@@ -384,7 +431,7 @@ export const LeadTable = () => {
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Origem</label>
             <select value={filterOrigin} onChange={(e) => setFilterOrigin(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
               <option value="">(Todas)</option>
-              {origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}
+              {origins.map((origin: string) => <option key={origin} value={origin}>{origin}</option>)}
             </select>
           </div>
           
@@ -412,7 +459,22 @@ export const LeadTable = () => {
       </div>
 
       <div className="flex items-center justify-between px-1">
+        <div className="flex gap-2">
+          <button 
+            onClick={() => { setFilterStatus('Novo da URA'); setFilterQueue('Higienização'); applyFilters(); }}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${filterQueue === 'Higienização' ? 'bg-amber-500 text-white border-amber-600' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+          >
+            Pendente Higienização
+          </button>
+          <button 
+            onClick={() => { setFilterStatus('Com limite'); setFilterQueue('Pronto para enviar'); applyFilters(); }}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${filterStatus === 'Com limite' ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+          >
+            Com Saque
+          </button>
+        </div>
         <div className="text-sm text-slate-500 font-medium italic">
+          <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg mr-2 border border-slate-200 dark:border-slate-700 font-bold not-italic text-[10px] text-emerald-600">ENVIADOS HOJE: {useLeadStore.getState().sendsTodayCount}</span>
           Exibindo <span className="text-emerald-600 dark:text-emerald-400 font-bold not-italic">{filteredLeads.length}</span> de <span className="font-bold not-italic">{leads.length}</span> leads
         </div>
         <button 
@@ -429,13 +491,13 @@ export const LeadTable = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left table-fixed">
             <colgroup>
-              {columnWidths.map((w, idx) => (
+              {columnWidths.map((w: number, idx: number) => (
                 <col key={idx} style={{ width: `${w}px`, minWidth: '80px' }} />
               ))}
             </colgroup>
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
-                {columns.map((col, idx) => (
+                {columns.map((col: string, idx: number) => (
                   <th key={col} className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${idx === 3 ? 'text-right' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span>{col}</span>
@@ -468,14 +530,20 @@ export const LeadTable = () => {
                           <button onClick={() => { handleCopy(lead.name, "Nome"); alert("Nome copiado!"); }} className="ml-1 text-slate-400 hover:text-emerald-500" title="Copiar Nome"><Copy size={12}/></button>
                           {lead.outdated && <span title="Dados desatualizados"><AlertCircle size={14} className="text-red-500" /></span>}
                         </span>
-                        <select 
-                          value={lead.origin || ''}
-                          onChange={(e) => updateLead(lead.id, { origin: e.target.value })}
-                          className="text-[10px] text-slate-500 bg-transparent uppercase tracking-wider font-bold outline-none border-none mt-1 w-24 p-0 cursor-pointer"
-                        >
-                          <option value="">N/A</option>
-                          {origins.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {lead.origin && (
+                             <span className="text-[9px] text-slate-500 bg-slate-100 px-1 rounded font-bold uppercase">{lead.origin}</span>
+                          )}
+                          {(lead.tags || []).map((tagId: string) => {
+                            const tag = useSettingsStore.getState().tags.find((t: any) => t.id === tagId);
+                            if (!tag) return null;
+                            return (
+                              <span key={tagId} style={{ backgroundColor: tag.color + '20', color: tag.color }} className="text-[8px] font-black px-1 rounded uppercase border" title={tag.label}>
+                                {tag.label.split(' ')[1] || tag.label}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
@@ -505,7 +573,7 @@ export const LeadTable = () => {
                           onChange={(e) => updateLead(lead.id, { bank: e.target.value })}
                           className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-24"
                         >
-                           {banks.map(b => (
+                           {banks.map((b: Bank) => (
                              <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
                                {typeof b === 'string' ? b : b.name}
                              </option>
@@ -522,12 +590,19 @@ export const LeadTable = () => {
                             e.target.value = formatBRL(e.target.value);
                           }}
                           onBlur={(e) => handleQuickEditValue(lead, e.target.value)}
-                          className="bg-transparent border-none outline-none text-right font-black text-emerald-600 dark:text-emerald-400 text-base w-28 focus:ring-1 focus:ring-emerald-500 rounded px-1"
+                          className={`bg-transparent border-none outline-none text-right font-black text-base w-28 focus:ring-1 focus:ring-emerald-500 rounded px-1 ${
+                             lead.availableValue > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                          }`}
                         />
                         {lead.availableValueUpdatedAt && (
-                          <span className="text-[9px] text-slate-400 flex items-center gap-1 font-medium mt-1">
-                            <Clock size={10} /> Atualizado em {format(parseISO(lead.availableValueUpdatedAt), 'dd/MM/yyyy')}
-                          </span>
+                          <div className="flex items-center gap-1 mt-1">
+                            {(() => {
+                              const diff = differenceInDays(new Date(), parseISO(lead.availableValueUpdatedAt));
+                              if (diff >= 7) return <span className="text-[9px] font-black text-red-500 bg-red-50 px-1 rounded flex items-center gap-1 border border-red-100 animate-pulse"><AlertCircle size={10} /> SALDO VENCIDO</span>;
+                              if (diff >= 3) return <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1 rounded flex items-center gap-1 border border-amber-100"><AlertCircle size={10} /> SALDO DESATUALIZADO</span>;
+                              return <span className="text-[9px] text-slate-400 font-medium flex items-center gap-1"><Clock size={10} /> Atualizado {format(parseISO(lead.availableValueUpdatedAt), 'dd/MM')}</span>;
+                            })()}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -543,7 +618,7 @@ export const LeadTable = () => {
                             borderLeft: `3px solid ${getStatusColor(lead.status)}`
                           }}
                         >
-                          {leadStatuses.map(s => (
+                          {leadStatuses.map((s: LeadStatusConfig) => (
                             <option key={s.id} value={s.name} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">{s.name}</option>
                           ))}
                         </select>
@@ -563,20 +638,21 @@ export const LeadTable = () => {
                       <div className="inline-flex flex-col items-start mr-3 align-middle">
                         <div className="mb-2">
                           <select 
-                            value={lead.selectedTemplateId || (messageTemplates.find(t => t.isDefault)?.id || '')}
+                            value={lead.selectedTemplateId || (messageTemplates.find((t: MessageTemplate) => t.isDefault)?.id || '')}
                             onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
                             className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px]"
                           >
                             <option value="">Padrão</option>
-                            {messageTemplates.map(tmpl => (
+                            {messageTemplates.map((tmpl: MessageTemplate) => (
                               <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
                             ))}
                           </select>
                         </div>
                         <div className="inline-flex gap-1">
-                          <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-95">Enviar</button>
-                          <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all">Editar</button>
-                          <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all">Excluir</button>
+                          <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-95" title="Enviar WhatsApp"><Send size={16} /></button>
+                          <button onClick={() => handleShowHistory(lead)} className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 transition-all" title="Histórico"><History size={16} /></button>
+                          <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all" title="Editar"><Edit2 size={16} /></button>
+                          <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all" title="Excluir"><Trash2 size={16} /></button>
                         </div>
                       </div>
                     </td>
@@ -591,6 +667,101 @@ export const LeadTable = () => {
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
       <EditLeadModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} lead={currentLead} />
       <UraImportModal isOpen={isUraModalOpen} onClose={() => setIsUraModalOpen(false)} />
+
+      {/* History Modal */}
+      {isHistoryModalOpen && currentLead && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="glass-panel w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <History className="text-emerald-600" />
+                <h3 className="text-lg font-bold">Histórico: {currentLead.name}</h3>
+              </div>
+              <button onClick={() => setIsHistoryModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+                <XCircle size={20} className="text-slate-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {!(currentLead.history && currentLead.history.length > 0) ? (
+                <div className="text-center py-10 text-slate-400 italic">Nenhum histórico registrado.</div>
+              ) : (
+                [...currentLead.history].reverse().map((entry, idx) => (
+                  <div key={idx} className="flex gap-3 relative">
+                    {idx < currentLead.history!.length - 1 && (
+                      <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-slate-100 dark:bg-slate-800" />
+                    )}
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center z-10 mt-0.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    </div>
+                    <div className="flex flex-col flex-1 pb-4">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{entry.action}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">
+                        {format(parseISO(entry.createdAt), 'dd/MM/yyyy HH:mm')}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Preview Modal */}
+      {isPreviewModalOpen && previewLead && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="glass-panel w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-emerald-500/10">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-emerald-500/5 to-transparent flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                 <MessageSquare className="text-emerald-500" />
+                 <h3 className="text-xl font-black italic">Preview do WhatsApp</h3>
+               </div>
+               <button onClick={() => setIsPreviewModalOpen(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={24} /></button>
+            </div>
+            <div className="p-6 space-y-6">
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Cliente</span>
+                    <p className="font-bold text-slate-800 dark:text-slate-100">{previewLead.name}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">WhatsApp</span>
+                    <p className="font-bold text-slate-800 dark:text-slate-100">{formatDisplayPhone(previewLead.phone)}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Banco</span>
+                    <p className="font-bold text-slate-800 dark:text-slate-100">{previewLead.bank}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Valor</span>
+                    <p className="font-black text-emerald-600">{formatBRL(previewLead.availableValue)}</p>
+                  </div>
+               </div>
+
+               <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl p-5">
+                  <span className="text-[10px] font-black text-emerald-600 uppercase block mb-3 tracking-widest">Conteúdo da Mensagem</span>
+                  <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-medium leading-relaxed">
+                    {(() => {
+                       const tmpl = messageTemplates.find((t: MessageTemplate) => t.id === (previewLead.selectedTemplateId || messageTemplates.find((t2: MessageTemplate)=>t2.isDefault)?.id || messageTemplates[0]?.id));
+                       let content = tmpl?.content || "";
+                       content = content.replace(/{nome}/g, previewLead.name.split(' ')[0]);
+                       content = content.replace(/{valor}/g, formatBRL(previewLead.availableValue));
+                       content = content.replace(/{banco}/g, previewLead.bank);
+                       return content;
+                    })()}
+                  </div>
+               </div>
+
+               <div className="flex gap-3 pt-2">
+                 <button onClick={() => setIsPreviewModalOpen(false)} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">Cancelar</button>
+                 <button onClick={() => confirmSendWhatsApp(previewLead)} className="flex-[2] py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+                    <Send size={20} /> Confirmar Envio
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

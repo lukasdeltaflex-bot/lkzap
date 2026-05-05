@@ -10,6 +10,7 @@ export interface LeadStatusConfig {
 export type LeadQueue =
   | 'Pronto para enviar'
   | 'Aguardando'
+  | 'Higienização'
   | 'Frio'
   | 'Reabordar';
 
@@ -41,6 +42,18 @@ export interface MessageTemplate {
   isDefault: boolean;
 }
 
+export interface HistoryEntry {
+  action: string;
+  createdAt: string; // ISO String
+  user?: string;
+}
+
+export interface Tag {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -57,5 +70,7 @@ export interface Lead {
   lastSendDate?: string | null; // ISO String
   outdated?: boolean;
   selectedTemplateId?: string;
-  observations?: string;
+  history?: HistoryEntry[];
+  notes?: string;
+  tags?: string[];
 }
