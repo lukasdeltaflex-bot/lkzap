@@ -102,19 +102,25 @@ export const isDuplicateLead = (existingLeads: Lead[], newCpf: string, newPhone:
   });
 };
 export const formatCurrencyBRL = (value: number | string): string => {
-  // If value is a number, format directly (preserves 2 decimal places)
-  if (typeof value === 'number') {
+  if (value === null || value === undefined) {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(isNaN(value) ? 0 : value);
+    }).format(0).replace(/\u00A0/g, ' ');
   }
 
-  // For string input (from input mask): strip all non-digits, treat as cents
-  const digits = value.replace(/[^\d]/g, '');
-  const cents = parseInt(digits || '0', 10);
+  let cents: number;
+
+  if (typeof value === 'number') {
+    cents = Math.round(value * 100);
+  } else {
+    // Para entrada de string (máscara): remove tudo que não é dígito e trata como centavos
+    const digits = value.replace(/\D/g, '');
+    cents = parseInt(digits || '0', 10);
+  }
+
   const real = cents / 100;
 
   return new Intl.NumberFormat('pt-BR', {
@@ -122,11 +128,16 @@ export const formatCurrencyBRL = (value: number | string): string => {
     currency: 'BRL',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(real);
+  }).format(real).replace(/\u00A0/g, ' '); // Garante espaço normal após R$
 };
 
-export const parseCurrencyBRL = (val: string): number => {
+export const parseCurrencyBRL = (val: string | number): number => {
+  if (typeof val === 'number') return val;
   const digits = val.replace(/\D/g, '');
   if (!digits) return 0;
   return parseInt(digits, 10) / 100;
 };
+
+// Aliases sugeridos pelo usuário
+export const formatBRL = formatCurrencyBRL;
+export const parseBRL = parseCurrencyBRL;

@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { generateWhatsAppLink, generateReabordagemLink } from '../lib/whatsapp';
 import { exportToExcel, exportToPDF } from '../lib/export';
 import { Lead } from '../types';
-import { formatDisplayPhone, formatCPF, parseCurrencyBRL, normalizePhone } from '../lib/utils';
+import { formatDisplayPhone, formatCPF, parseBRL, formatBRL, normalizePhone } from '../lib/utils';
 import { 
   MessageCircle, 
   ChevronRight, 
@@ -202,7 +202,7 @@ export const LeadTable = () => {
   };
   
   const handleQuickEditValue = (lead: Lead, valStr: string) => {
-     const newVal = parseCurrencyBRL(valStr);
+     const newVal = parseBRL(valStr);
      if (newVal !== lead.availableValue) {
        updateLead(lead.id, { 
          availableValue: newVal,
@@ -517,7 +517,10 @@ export const LeadTable = () => {
                       <div className="flex flex-col items-end">
                         <input 
                           type="text"
-                          defaultValue={formatCurrency(lead.availableValue)}
+                          defaultValue={formatBRL(lead.availableValue)}
+                          onChange={(e) => {
+                            e.target.value = formatBRL(e.target.value);
+                          }}
                           onBlur={(e) => handleQuickEditValue(lead, e.target.value)}
                           className="bg-transparent border-none outline-none text-right font-black text-emerald-600 dark:text-emerald-400 text-base w-28 focus:ring-1 focus:ring-emerald-500 rounded px-1"
                         />

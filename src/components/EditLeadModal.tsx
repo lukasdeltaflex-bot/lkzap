@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
-import { normalizeCPF, normalizePhone, validateCPF, formatCPF, formatCurrencyBRL, parseCurrencyBRL, formatDisplayPhone } from '../lib/utils';
+import { normalizeCPF, normalizePhone, validateCPF, formatCPF, formatBRL, parseBRL, formatDisplayPhone } from '../lib/utils';
 import { Lead, LeadStatus, LeadQueue } from '../types';
 
 interface Props {
@@ -34,7 +34,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       setPhone(formatDisplayPhone(lead.phone));
       setBank(lead.bank);
       setOrigin(lead.origin || '');
-      setValue(formatCurrencyBRL(lead.availableValue));
+      setValue(formatBRL(lead.availableValue));
       setStatus(lead.status);
       setQueue(lead.queue);
       setTemplateId(lead.selectedTemplateId || '');
@@ -44,7 +44,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
   if (!isOpen || !lead) return null;
 
   const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
-  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseCurrencyBRL(value) > 0 && bank && origin && status;
+  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseBRL(value) > 0 && bank && origin && status;
 
   function formatPhoneInput(val: string) {
     const digits = val.replace(/\D/g, "");
@@ -65,7 +65,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       phone: normalizePhone(phone),
       bank,
       origin,
-      availableValue: parseCurrencyBRL(value),
+      availableValue: parseBRL(value),
       status,
       queue,
       selectedTemplateId: templateId || undefined
@@ -114,7 +114,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
 
             <div>
               <label className="block text-[12px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Valor Disponível</label>
-              <input required type="text" value={value} onChange={e => setValue(formatCurrencyBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500" />
+              <input required type="text" value={value} onChange={e => setValue(formatBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
 
             <div>

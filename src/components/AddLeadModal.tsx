@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X } from 'lucide-react';
-import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatCurrencyBRL, parseCurrencyBRL } from '../lib/utils';
+import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatBRL, parseBRL } from '../lib/utils';
 import { Lead } from '../types';
 
 interface Props {
@@ -25,7 +25,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
   const [status, setStatus] = useState<string>(leadStatuses.find(s => s.name === 'Com limite')?.name || leadStatuses[0]?.name || '');
 
   const isCPFValid = cpf.replace(/\D/g, '').length === 11 ? validateCPF(cpf) : true;
-  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseCurrencyBRL(value) > 0 && bank && origin && status;
+  const canSubmit = name.length > 2 && cpf.replace(/\D/g, '').length === 11 && validateCPF(cpf) && phone.replace(/\D/g, "").length >= 10 && parseBRL(value) > 0 && bank && origin && status;
 
   if (!isOpen) return null;
 
@@ -45,7 +45,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
       phone: normalizePhone(phone),
       bank,
       origin,
-      availableValue: parseCurrencyBRL(value),
+      availableValue: parseBRL(value),
       consultDate: new Date().toISOString(),
       status,
       queue: 'Pronto para enviar',
@@ -128,7 +128,7 @@ export const AddLeadModal = ({ isOpen, onClose }: Props) => {
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest px-1">Valor (R$)</label>
-              <input required type="text" value={value} onChange={e => setValue(formatCurrencyBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-600" placeholder="R$ 0,00" />
+              <input required type="text" value={value} onChange={e => setValue(formatBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-600" placeholder="R$ 0,00" />
             </div>
           </div>
 

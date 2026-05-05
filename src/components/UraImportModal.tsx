@@ -5,7 +5,7 @@ import { useLeadStore } from '../store/useLeadStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { X, Zap, AlertTriangle, CheckCircle2, ClipboardPaste } from 'lucide-react';
 import { parseUraText, UraParseResult } from '../lib/uraParser';
-import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatCurrencyBRL, parseCurrencyBRL } from '../lib/utils';
+import { normalizeCPF, normalizePhone, isDuplicateLead, validateCPF, formatCPF, formatBRL, parseBRL } from '../lib/utils';
 
 interface Props {
   isOpen: boolean;
@@ -98,7 +98,7 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
       phone: cleanPhone,
       bank,
       origin,
-      availableValue: parseCurrencyBRL(value) || 0,
+      availableValue: parseBRL(value) || 0,
       consultDate: '', // Data de consulta vazia/null como solicitado
       status,
       queue: 'Aguardando', // Fila inicial deve ser Aguardando
@@ -236,7 +236,7 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Valor Disponível</label>
-                <input type="text" value={value} onChange={e => setValue(formatCurrencyBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-600" placeholder="R$ 0,00" />
+                <input type="text" value={value} onChange={e => setValue(formatBRL(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-600" placeholder="R$ 0,00" />
               </div>
 
               <div>
