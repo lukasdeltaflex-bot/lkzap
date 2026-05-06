@@ -1,33 +1,19 @@
 "use client";
-
 import React, { useRef, useState, useCallback } from 'react';
-import { ImageIcon, Download, X, Loader2 } from 'lucide-react';
+import { ImageIcon, Download, X, Loader2, Send } from 'lucide-react';
 
-interface OfferImageGeneratorProps {
-  lead: {
-    name: string;
-    availableValue: number;
-    bank: string;
-  };
+interface Props {
+  lead: { name: string; availableValue: number; bank: string; phone?: string };
   onClose: () => void;
 }
 
-function formatBRL(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-  }).format(value);
+function fmtBRL(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 }
 
-// Draw a rounded rectangle
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number
-) {
+function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + r);
   ctx.lineTo(x + w, y + h - r);
   ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
@@ -38,455 +24,282 @@ function roundRect(
   ctx.closePath();
 }
 
-function drawGlowCircle(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number, r: number, color: string
-) {
-  const grd = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
-  grd.addColorStop(0, color);
-  grd.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grd;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fill();
+const BANK_THEMES: Record<string, { primary: string; secondary: string; card1: string; card2: string; glow: string }> = {
+  daycoval: { primary: '#22c55e', secondary: '#16a34a', card1: '#0e2a3d', card2: '#1a3a52', glow: 'rgba(34,197,94,0.18)' },
+  bmg:      { primary: '#FF6A00', secondary: '#cc5000', card1: '#7a2e00', card2: '#a33d00', glow: 'rgba(255,106,0,0.22)' },
+  default:  { primary: '#10B981', secondary: '#059669', card1: '#0d2a1e', card2: '#1a3d2e', glow: 'rgba(16,185,129,0.18)' },
+};
+
+function getTheme(banco: string) {
+  const key = banco.toLowerCase();
+  for (const [k, t] of Object.entries(BANK_THEMES)) {
+    if (key.includes(k)) return t;
+  }
+  return BANK_THEMES.default;
 }
 
-export function generateOfferCanvas(params: {
-  nome: string;
-  valor: number;
-  banco: string;
-}): HTMLCanvasElement {
-  const { nome, valor, banco } = params;
-  const W = 680;
-  const H = 1020;
-
+export function generateOfferCanvas(p: { nome: string; valor: number; banco: string }): HTMLCanvasElement {
+  const { nome, valor, banco } = p;
+  const W = 1080, H = 1920;
+  const T = getTheme(banco);
   const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // ── BACKGROUND ──────────────────────────────────────────────────────────
+  // BG
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#070d10');
-  bg.addColorStop(1, '#040a0d');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  bg.addColorStop(0, '#060c0f'); bg.addColorStop(1, '#030608');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // Subtle dark green ambient glow bottom-left
-  drawGlowCircle(ctx, 0, H, 400, 'rgba(5,80,40,0.18)');
+  // Glow
+  const gl = ctx.createRadialGradient(W/2, H*0.3, 100, W/2, H*0.3, 600);
+  gl.addColorStop(0, T.glow); gl.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
 
-  // ── SECTION 1: HEADER ────────────────────────────────────────────────────
-  const headerH = 210;
+  // ── HEADER ────────────────────────────────────────────────
+  const hH = 380;
+  const hBg = ctx.createLinearGradient(0, 0, 0, hH);
+  hBg.addColorStop(0, '#0d1820'); hBg.addColorStop(1, '#060c10');
+  ctx.fillStyle = hBg; ctx.fillRect(0, 0, W, hH);
 
-  // Dark header bg
-  const hBg = ctx.createLinearGradient(0, 0, 0, headerH);
-  hBg.addColorStop(0, '#0d1820');
-  hBg.addColorStop(1, '#070d14');
-  ctx.fillStyle = hBg;
-  ctx.fillRect(0, 0, W, headerH);
+  // Card
+  const cX = 40, cY = 44, cW = 340, cH = 220;
+  const cGrd = ctx.createLinearGradient(cX, cY, cX+cW, cY+cH);
+  cGrd.addColorStop(0, T.card1); cGrd.addColorStop(1, T.card2);
+  ctx.fillStyle = cGrd; rr(ctx, cX, cY, cW, cH, 22); ctx.fill();
+  ctx.strokeStyle = T.primary + '60'; ctx.lineWidth = 2;
+  rr(ctx, cX, cY, cW, cH, 22); ctx.stroke();
 
-  // Card graphic (left side)
-  const cardX = 28, cardY = 30, cardW = 210, cardH = 140;
-  const cardGrd = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
-  cardGrd.addColorStop(0, '#0e2a3d');
-  cardGrd.addColorStop(0.5, '#1a3a52');
-  cardGrd.addColorStop(1, '#0d2030');
-  ctx.fillStyle = cardGrd;
-  roundRect(ctx, cardX, cardY, cardW, cardH, 14);
-  ctx.fill();
-
-  // Card border glow
-  ctx.strokeStyle = 'rgba(30,120,180,0.4)';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, cardX, cardY, cardW, cardH, 14);
-  ctx.stroke();
-
-  // Chip on card
-  const chipGrd = ctx.createLinearGradient(cardX + 20, cardY + 50, cardX + 60, cardY + 90);
-  chipGrd.addColorStop(0, '#b8962e');
-  chipGrd.addColorStop(0.5, '#f0c040');
-  chipGrd.addColorStop(1, '#b8962e');
-  ctx.fillStyle = chipGrd;
-  roundRect(ctx, cardX + 20, cardY + 50, 42, 32, 4);
-  ctx.fill();
-  // Chip lines
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-  ctx.lineWidth = 1;
+  // Chip
+  const chipG = ctx.createLinearGradient(cX+32, cY+80, cX+100, cY+134);
+  chipG.addColorStop(0, '#b8962e'); chipG.addColorStop(0.5, '#f0c040'); chipG.addColorStop(1, '#b8962e');
+  ctx.fillStyle = chipG; rr(ctx, cX+32, cY+80, 68, 50, 6); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
   for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    ctx.moveTo(cardX + 20, cardY + 58 + i * 8);
-    ctx.lineTo(cardX + 62, cardY + 58 + i * 8);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cX+32, cY+93+i*13); ctx.lineTo(cX+100, cY+93+i*13); ctx.stroke();
   }
-  ctx.beginPath();
-  ctx.moveTo(cardX + 41, cardY + 50);
-  ctx.lineTo(cardX + 41, cardY + 82);
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cX+66, cY+80); ctx.lineTo(cX+66, cY+130); ctx.stroke();
 
-  // Bank initial letter on card
-  ctx.font = 'bold 44px serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.textAlign = 'right';
-  ctx.fillText(banco.charAt(0).toUpperCase(), cardX + cardW - 20, cardY + cardH - 20);
+  // Bank name on card
+  ctx.font = 'bold 22px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.textAlign = 'left'; ctx.fillText(banco.toUpperCase(), cX+32, cY+52);
+  ctx.font = 'bold 70px serif'; ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.textAlign = 'right'; ctx.fillText(banco.charAt(0).toUpperCase(), cX+cW-28, cY+cH-22);
 
-  // Bank name on card (top-left)
-  ctx.font = 'bold 13px Arial';
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.textAlign = 'left';
-  ctx.fillText(banco.toUpperCase(), cardX + 20, cardY + 36);
+  // Right: CRÉDITO LIBERADO
+  const rx = cX + cW + 48;
+  ctx.font = 'bold 52px Arial'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
+  ctx.fillText('CRÉDITO', rx, 108);
+  const libG = ctx.createLinearGradient(rx, 120, rx+380, 200);
+  libG.addColorStop(0, T.primary); libG.addColorStop(1, T.secondary);
+  ctx.font = 'bold 88px Arial'; ctx.fillStyle = libG; ctx.fillText('LIBERADO', rx, 205);
+  // Check circle
+  const chkX = rx + 468, chkY = 162;
+  ctx.beginPath(); ctx.arc(chkX, chkY, 40, 0, Math.PI*2);
+  ctx.fillStyle = T.primary; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(chkX-18, chkY); ctx.lineTo(chkX-5, chkY+14); ctx.lineTo(chkX+19, chkY-14); ctx.stroke();
 
-  // ── RIGHT SIDE HEADER TEXT ─────────────────────────────────────────────
-  const rx = cardX + cardW + 30;
+  // "CARTÃO BANCO"
+  const lY = 248;
+  ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(rx, lY); ctx.lineTo(rx+48, lY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rx+290, lY); ctx.lineTo(rx+480, lY); ctx.stroke();
+  ctx.font = 'bold 26px Arial'; ctx.fillStyle = '#d4a843'; ctx.fillText('CARTÃO ', rx+56, lY+9);
+  const tw = ctx.measureText('CARTÃO ').width;
+  ctx.fillStyle = '#ffffff'; ctx.fillText(banco.toUpperCase(), rx+56+tw, lY+9);
 
-  // "CRÉDITO" text
-  ctx.font = 'bold 32px Arial';
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'left';
-  ctx.fillText('CRÉDITO', rx, 72);
+  // Divider
+  ctx.strokeStyle = T.primary+'50'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, hH); ctx.lineTo(W, hH); ctx.stroke();
 
-  // "LIBERADO" in gold-green gradient
-  const libGrd = ctx.createLinearGradient(rx, 80, rx + 200, 120);
-  libGrd.addColorStop(0, '#22c55e');
-  libGrd.addColorStop(1, '#16a34a');
-  ctx.font = 'bold 50px Arial';
-  ctx.fillStyle = libGrd;
-  ctx.fillText('LIBERADO', rx, 124);
+  // ── VALUE BOX ────────────────────────────────────────────
+  const vY = hH+28, vH = 520, pad = 32;
+  const vBg = ctx.createLinearGradient(pad, vY, pad, vY+vH);
+  vBg.addColorStop(0, '#0d1e14'); vBg.addColorStop(1, '#080f0a');
+  ctx.fillStyle = vBg; rr(ctx, pad, vY, W-pad*2, vH, 26); ctx.fill();
+  ctx.strokeStyle = T.primary+'50'; ctx.lineWidth = 2;
+  rr(ctx, pad, vY, W-pad*2, vH, 26); ctx.stroke();
 
-  // Checkmark circle
-  const chkX = rx + 228, chkY = 95, chkR = 22;
-  ctx.beginPath();
-  ctx.arc(chkX, chkY, chkR, 0, Math.PI * 2);
-  ctx.fillStyle = '#22c55e';
-  ctx.fill();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(chkX - 11, chkY);
-  ctx.lineTo(chkX - 3, chkY + 9);
-  ctx.lineTo(chkX + 12, chkY - 9);
-  ctx.stroke();
+  // "VOCÊ TEM"
+  const vtY = vY+72;
+  ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(W/2-160, vtY); ctx.lineTo(W/2-88, vtY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2+88, vtY); ctx.lineTo(W/2+160, vtY); ctx.stroke();
+  ctx.font = 'bold 28px Arial'; ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center';
+  ctx.fillText('VOCÊ TEM', W/2, vtY+10);
 
-  // Divider lines + "CARTÃO {BANCO}"
-  const lineY = 144;
-  ctx.strokeStyle = '#c9a227';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(rx, lineY); ctx.lineTo(rx + 30, lineY); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(rx + 175, lineY); ctx.lineTo(rx + 290, lineY); ctx.stroke();
+  // Big value
+  const valStr = fmtBRL(valor);
+  let fs = 168;
+  ctx.font = `900 ${fs}px Arial`;
+  while (ctx.measureText(valStr).width > W-pad*4 && fs > 80) { fs -= 6; ctx.font = `900 ${fs}px Arial`; }
+  const goldG = ctx.createLinearGradient(0, vtY+20, 0, vtY+20+fs);
+  goldG.addColorStop(0, '#fef08a'); goldG.addColorStop(0.3, '#f0c040');
+  goldG.addColorStop(0.6, T.primary === '#FF6A00' ? '#FF6A00' : '#c9a227'); goldG.addColorStop(1, '#92740f');
+  ctx.fillStyle = goldG; ctx.fillText(valStr, W/2, vtY+20+fs);
 
-  ctx.font = '700 16px Arial';
-  ctx.fillStyle = '#d4a843';
-  ctx.textAlign = 'left';
-  ctx.fillText('CARTÃO ', rx + 34, lineY + 6);
-  ctx.font = 'bold 16px Arial';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(banco.toUpperCase(), rx + 110, lineY + 6);
+  // Glow under value
+  const vgl = ctx.createRadialGradient(W/2, vtY+20+fs, 40, W/2, vtY+20+fs, 200);
+  vgl.addColorStop(0, T.glow); vgl.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = vgl; ctx.fillRect(0, vtY+20+fs-100, W, 200);
 
-  // ── SEPARATOR ────────────────────────────────────────────────────────────
-  ctx.strokeStyle = 'rgba(30,100,60,0.5)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, headerH);
-  ctx.lineTo(W, headerH);
-  ctx.stroke();
+  // Badge
+  const bY = vtY+20+fs+28, bW = 520, bH = 58, bX = (W-bW)/2;
+  ctx.fillStyle = T.secondary; rr(ctx, bX, bY, bW, bH, 10); ctx.fill();
+  ctx.font = 'bold 26px Arial'; ctx.fillStyle = '#fff'; ctx.fillText('DISPONÍVEIS PARA SAQUE', W/2, bY+38);
 
-  // ── SECTION 2: VALUE BOX ─────────────────────────────────────────────────
-  const valY = headerH + 16;
-  const valH = 250;
-  const pad = 20;
+  // Subtext
+  const stY = bY+bH+44;
+  ctx.font = 'bold 28px Arial'; ctx.fillStyle = '#e5e7eb';
+  ctx.fillText('SAQUE COMPLEMENTAR DO SEU CARTÃO', W/2, stY);
+  ctx.font = 'bold 30px Arial'; ctx.fillStyle = T.primary;
+  ctx.fillText(banco.toUpperCase(), W/2, stY+40);
 
-  const valBoxGrd = ctx.createLinearGradient(pad, valY, pad, valY + valH);
-  valBoxGrd.addColorStop(0, '#0d1e14');
-  valBoxGrd.addColorStop(1, '#091610');
-  ctx.fillStyle = valBoxGrd;
-  roundRect(ctx, pad, valY, W - pad * 2, valH, 16);
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(34,197,94,0.35)';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, pad, valY, W - pad * 2, valH, 16);
-  ctx.stroke();
-
-  // "VOCÊ TEM" with decorative dashes
-  const vtY = valY + 44;
-  ctx.font = 'bold 16px Arial';
-  ctx.fillStyle = '#9ca3af';
-  ctx.textAlign = 'center';
-
-  ctx.strokeStyle = '#9ca3af';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W / 2 - 100, vtY); ctx.lineTo(W / 2 - 60, vtY); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W / 2 + 60, vtY); ctx.lineTo(W / 2 + 100, vtY); ctx.stroke();
-  ctx.fillText('VOCÊ TEM', W / 2, vtY + 5);
-
-  // Large gold value
-  const valorStr = formatBRL(valor);
-  // Measure to fit
-  let fontSize = 88;
-  ctx.font = `900 ${fontSize}px Arial`;
-  while (ctx.measureText(valorStr).width > W - pad * 4 && fontSize > 48) {
-    fontSize -= 4;
-    ctx.font = `900 ${fontSize}px Arial`;
-  }
-
-  const goldGrd = ctx.createLinearGradient(0, vtY + 10, 0, vtY + 10 + fontSize);
-  goldGrd.addColorStop(0, '#fef08a');
-  goldGrd.addColorStop(0.3, '#f0c040');
-  goldGrd.addColorStop(0.6, '#c9a227');
-  goldGrd.addColorStop(1, '#92740f');
-  ctx.fillStyle = goldGrd;
-  ctx.textAlign = 'center';
-  ctx.fillText(valorStr, W / 2, vtY + 14 + fontSize);
-
-  // Gold glow under value
-  drawGlowCircle(ctx, W / 2, vtY + 14 + fontSize - 10, 80, 'rgba(200,160,40,0.12)');
-
-  // "DISPONÍVEIS PARA SAQUE" badge
-  const badgeY = vtY + 14 + fontSize + 18;
-  const badgeW = 320, badgeH = 36, badgeX = (W - badgeW) / 2;
-  ctx.fillStyle = '#16a34a';
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 6);
-  ctx.fill();
-  ctx.font = 'bold 15px Arial';
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.fillText('DISPONÍVEIS PARA SAQUE', W / 2, badgeY + 24);
-
-  // "SAQUE COMPLEMENTAR..." line
-  const subtextY = badgeY + badgeH + 30;
-  ctx.font = 'bold 16px Arial';
-  ctx.fillStyle = '#e5e7eb';
-  ctx.textAlign = 'center';
-  ctx.fillText('SAQUE COMPLEMENTAR DO SEU CARTÃO', W / 2, subtextY);
-  ctx.font = 'bold 17px Arial';
-  ctx.fillStyle = '#22c55e';
-  ctx.fillText(banco.toUpperCase(), W / 2, subtextY + 24);
-
-  // ── SECTION 3: FEATURES ───────────────────────────────────────────────────
-  const featY = valY + valH + 20;
-  const featH = 190;
-  const colW = (W - pad * 2 - 16) / 3;
-
+  // ── FEATURES ─────────────────────────────────────────────
+  const fY = vY+vH+28, fH = 400;
   const features = [
     { icon: '🚀', title: 'LIBERAÇÃO\nRÁPIDA', badge: 'EM ATÉ 48H ⏱' },
     { icon: '📊', title: 'SEM AUMENTO\nDE DESCONTO\nNO SEU INSS!', badge: '✕  NÃO AUMENTA' },
     { icon: '💰', title: 'VALOR DEPOSITADO\nDIRETAMENTE\nNA SUA CONTA', badge: '🏦  + SEGURANÇA' },
   ];
-
+  const colW = (W-pad*2-24)/3;
   features.forEach((f, i) => {
-    const fx = pad + i * (colW + 8);
-    const fBg = ctx.createLinearGradient(fx, featY, fx, featY + featH);
-    fBg.addColorStop(0, '#0d1e14');
-    fBg.addColorStop(1, '#091408');
-    ctx.fillStyle = fBg;
-    roundRect(ctx, fx, featY, colW, featH, 12);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(34,197,94,0.25)';
-    ctx.lineWidth = 1;
-    roundRect(ctx, fx, featY, colW, featH, 12);
-    ctx.stroke();
+    const fx = pad+i*(colW+12);
+    const fbg = ctx.createLinearGradient(fx, fY, fx, fY+fH);
+    fbg.addColorStop(0, '#0d1e14'); fbg.addColorStop(1, '#080f08');
+    ctx.fillStyle = fbg; rr(ctx, fx, fY, colW, fH, 18); ctx.fill();
+    ctx.strokeStyle = T.primary+'30'; ctx.lineWidth = 1.5;
+    rr(ctx, fx, fY, colW, fH, 18); ctx.stroke();
 
-    // Icon circle
-    const icX = fx + colW / 2, icY = featY + 36;
-    ctx.beginPath();
-    ctx.arc(icX, icY, 26, 0, Math.PI * 2);
-    ctx.fillStyle = '#14532d';
-    ctx.fill();
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    const icX = fx+colW/2, icY = fY+70;
+    ctx.beginPath(); ctx.arc(icX, icY, 54, 0, Math.PI*2);
+    ctx.fillStyle = T.secondary+'33'; ctx.fill();
+    ctx.strokeStyle = T.primary; ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = '46px serif'; ctx.textAlign = 'center'; ctx.fillText(f.icon, icX, icY+16);
 
-    ctx.font = '22px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(f.icon, icX, icY + 8);
-
-    // Feature title (multi-line)
     const lines = f.title.split('\n');
-    ctx.font = 'bold 11.5px Arial';
-    ctx.fillStyle = '#22c55e';
-    ctx.textAlign = 'center';
-    const titleStartY = icY + 44;
-    lines.forEach((line, li) => {
-      ctx.fillText(line, icX, titleStartY + li * 16);
-    });
+    ctx.font = 'bold 22px Arial'; ctx.fillStyle = T.primary;
+    const tlY = icY+90;
+    lines.forEach((ln, li) => ctx.fillText(ln, icX, tlY+li*30));
 
-    // Badge
-    const bw = colW - 16, bh = 24, bx = fx + 8, by = featY + featH - 34;
-    ctx.fillStyle = '#052e14';
-    roundRect(ctx, bx, by, bw, bh, 5);
-    ctx.fill();
-    ctx.strokeStyle = '#166534';
-    ctx.lineWidth = 1;
-    roundRect(ctx, bx, by, bw, bh, 5);
-    ctx.stroke();
-
-    ctx.font = 'bold 9.5px Arial';
-    ctx.fillStyle = '#4ade80';
-    ctx.textAlign = 'center';
-    ctx.fillText(f.badge, bx + bw / 2, by + 16);
+    const bBY = fY+fH-60, bBW = colW-24, bBX = fx+12;
+    ctx.fillStyle = '#052e14'; rr(ctx, bBX, bBY, bBW, 40, 8); ctx.fill();
+    ctx.strokeStyle = T.secondary+'60'; ctx.lineWidth = 1;
+    rr(ctx, bBX, bBY, bBW, 40, 8); ctx.stroke();
+    ctx.font = 'bold 17px Arial'; ctx.fillStyle = T.primary;
+    ctx.fillText(f.badge, bBX+bBW/2, bBY+26);
   });
 
-  // ── SECTION 4: CTA BOX ───────────────────────────────────────────────────
-  const ctaY = featY + featH + 16;
-  const ctaH = 120;
+  // ── CTA ───────────────────────────────────────────────────
+  const cY2 = fY+fH+28, cH2 = 240;
+  const ctaBg = ctx.createLinearGradient(pad, cY2, pad, cY2+cH2);
+  ctaBg.addColorStop(0, T.card1); ctaBg.addColorStop(1, '#040808');
+  ctx.fillStyle = ctaBg; rr(ctx, pad, cY2, W-pad*2, cH2, 22); ctx.fill();
+  ctx.strokeStyle = T.primary+'60'; ctx.lineWidth = 2;
+  rr(ctx, pad, cY2, W-pad*2, cH2, 22); ctx.stroke();
 
-  const ctaBg = ctx.createLinearGradient(pad, ctaY, pad, ctaY + ctaH);
-  ctaBg.addColorStop(0, '#0f2218');
-  ctaBg.addColorStop(1, '#081510');
-  ctx.fillStyle = ctaBg;
-  roundRect(ctx, pad, ctaY, W - pad * 2, ctaH, 14);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(34,197,94,0.4)';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, pad, ctaY, W - pad * 2, ctaH, 14);
-  ctx.stroke();
+  const oneX = pad+96, oneY = cY2+cH2/2;
+  const og = ctx.createRadialGradient(oneX, oneY, 14, oneX, oneY, 64);
+  og.addColorStop(0, T.primary); og.addColorStop(0.7, T.secondary); og.addColorStop(1, '#052e14');
+  ctx.fillStyle = og; ctx.beginPath(); ctx.arc(oneX, oneY, 64, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#86efac'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.font = 'bold 72px Arial'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  ctx.fillText('1', oneX, oneY+24);
 
-  // "1" circle
-  const oneX = pad + 56, oneY = ctaY + ctaH / 2;
-  const oneGrd = ctx.createRadialGradient(oneX, oneY, 8, oneX, oneY, 38);
-  oneGrd.addColorStop(0, '#22c55e');
-  oneGrd.addColorStop(0.6, '#16a34a');
-  oneGrd.addColorStop(1, '#14532d');
-  ctx.fillStyle = oneGrd;
-  ctx.beginPath();
-  ctx.arc(oneX, oneY, 38, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#86efac';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const ctaX = oneX+90;
+  ctx.textAlign = 'left'; ctx.font = 'bold 44px Arial'; ctx.fillStyle = '#fff';
+  ctx.fillText('DIGITE ', ctaX, cY2+96);
+  const dw = ctx.measureText('DIGITE ').width;
+  ctx.fillStyle = T.primary; ctx.fillText('1', ctaX+dw, cY2+96);
+  const ow = ctx.measureText('1').width;
+  ctx.fillStyle = '#fff'; ctx.fillText(' AGORA', ctaX+dw+ow, cY2+96);
+  ctx.font = '26px Arial'; ctx.fillStyle = '#d1fae5'; ctx.fillText('E RECEBA O LINK DE CONFIRMAÇÃO', ctaX, cY2+142);
+  ctx.font = 'bold 30px Arial'; ctx.fillStyle = T.primary; ctx.fillText('E LIBERAÇÃO!', ctaX, cY2+184);
 
-  ctx.font = 'bold 42px Arial';
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.fillText('1', oneX, oneY + 15);
+  const waX = W-pad-72, waY = cY2+cH2/2;
+  ctx.beginPath(); ctx.arc(waX, waY, 58, 0, Math.PI*2);
+  ctx.fillStyle = '#25d366'; ctx.fill();
+  ctx.font = '52px serif'; ctx.textAlign = 'center'; ctx.fillText('💬', waX, waY+18);
 
-  // CTA text
-  const ctaTX = oneX + 56;
-  ctx.textAlign = 'left';
-  ctx.font = 'bold 22px Arial';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('DIGITE ', ctaTX, ctaY + 44);
-
-  const digW = ctx.measureText('DIGITE ').width;
-  ctx.font = 'bold 22px Arial';
-  ctx.fillStyle = '#22c55e';
-  ctx.fillText('1', ctaTX + digW, ctaY + 44);
-
-  const oneW = ctx.measureText('1').width;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(' AGORA', ctaTX + digW + oneW, ctaY + 44);
-
-  ctx.font = '14px Arial';
-  ctx.fillStyle = '#d1fae5';
-  ctx.fillText('E RECEBA O LINK DE CONFIRMAÇÃO', ctaTX, ctaY + 68);
-  ctx.font = 'bold 16px Arial';
-  ctx.fillStyle = '#22c55e';
-  ctx.fillText('E LIBERAÇÃO!', ctaTX, ctaY + 90);
-
-  // WhatsApp icon (circle with WA logo)
-  const waX = W - pad - 44, waY = ctaY + ctaH / 2;
-  ctx.beginPath();
-  ctx.arc(waX, waY, 36, 0, Math.PI * 2);
-  ctx.fillStyle = '#25d366';
-  ctx.fill();
-  ctx.font = '32px serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('💬', waX, waY + 11);
-
-  // ── SECTION 5: FOOTER ─────────────────────────────────────────────────────
-  const footY = ctaY + ctaH + 16;
-  const footH = 52;
-
-  ctx.fillStyle = '#0a1510';
-  roundRect(ctx, pad, footY, W - pad * 2, footH, 10);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(34,197,94,0.15)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, pad, footY, W - pad * 2, footH, 10);
-  ctx.stroke();
-
+  // ── FOOTER ────────────────────────────────────────────────
+  const ftY = cY2+cH2+22, ftH = 84;
+  ctx.fillStyle = '#0a1510'; rr(ctx, pad, ftY, W-pad*2, ftH, 14); ctx.fill();
+  ctx.strokeStyle = T.primary+'25'; ctx.lineWidth = 1;
+  rr(ctx, pad, ftY, W-pad*2, ftH, 14); ctx.stroke();
   const badges = ['🛡️  100% SEGURO', '🔒  SEUS DADOS PROTEGIDOS', '✅  EMPRESA AUTORIZADA'];
-  const segW = (W - pad * 2) / 3;
+  const sw = (W-pad*2)/3;
   badges.forEach((b, i) => {
-    // Vertical separator
     if (i > 0) {
-      ctx.strokeStyle = 'rgba(34,197,94,0.25)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(pad + i * segW, footY + 10);
-      ctx.lineTo(pad + i * segW, footY + footH - 10);
-      ctx.stroke();
+      ctx.strokeStyle = T.primary+'30'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad+i*sw, ftY+16); ctx.lineTo(pad+i*sw, ftY+ftH-16); ctx.stroke();
     }
-    ctx.font = '11px Arial';
-    ctx.fillStyle = '#9ca3af';
-    ctx.textAlign = 'center';
-    ctx.fillText(b, pad + i * segW + segW / 2, footY + footH / 2 + 4);
+    ctx.font = '20px Arial'; ctx.fillStyle = '#9ca3af'; ctx.textAlign = 'center';
+    ctx.fillText(b, pad+i*sw+sw/2, ftY+ftH/2+7);
   });
 
   // Disclaimer
-  const discY = footY + footH + 12;
-  ctx.font = '10px Arial';
-  ctx.fillStyle = 'rgba(156,163,175,0.6)';
-  ctx.textAlign = 'center';
-  ctx.fillText('*Sujeito à análise e aprovação de crédito.', W / 2, discY);
+  ctx.font = '17px Arial'; ctx.fillStyle = 'rgba(156,163,175,0.55)'; ctx.textAlign = 'center';
+  ctx.fillText('*Sujeito à análise e aprovação de crédito.', W/2, ftY+ftH+40);
 
   return canvas;
 }
 
-export const OfferImageGenerator: React.FC<OfferImageGeneratorProps> = ({ lead, onClose }) => {
+export const OfferImageGenerator: React.FC<Props> = ({ lead, onClose }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [nome, setNome] = useState(lead.name);
   const [valor, setValor] = useState(lead.availableValue);
   const [banco, setBanco] = useState(lead.bank || 'Daycoval');
+  const [phone] = useState(lead.phone || '');
 
   const generate = useCallback(() => {
     setIsGenerating(true);
     setTimeout(() => {
       try {
-        const canvas = generateOfferCanvas({ nome, valor, banco });
-        setImageUrl(canvas.toDataURL('image/png'));
-      } catch (e) {
-        console.error('Erro ao gerar imagem:', e);
-      } finally {
-        setIsGenerating(false);
-      }
+        const c = generateOfferCanvas({ nome, valor, banco });
+        setImageUrl(c.toDataURL('image/png'));
+      } catch (e) { console.error(e); }
+      finally { setIsGenerating(false); }
     }, 50);
   }, [nome, valor, banco]);
 
   const download = () => {
     if (!imageUrl) return;
     const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = `oferta_${banco}_${nome.replace(/\s+/g, '_')}.png`;
-    a.click();
+    a.href = imageUrl; a.download = `oferta_${banco}_${nome.replace(/\s+/g,'_')}.png`; a.click();
   };
 
-  const copyToClipboard = async () => {
+  const copyImg = async () => {
     if (!imageUrl) return;
     try {
       const res = await fetch(imageUrl);
       const blob = await res.blob();
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
-      ]);
-      alert('Imagem copiada para área de transferência!');
-    } catch {
-      download();
-    }
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      alert('Imagem copiada! Agora cole no WhatsApp.');
+    } catch { download(); }
+  };
+
+  const sendWhatsApp = async () => {
+    if (!imageUrl) { alert('Gere a imagem primeiro!'); return; }
+    download();
+    const txt = encodeURIComponent('Olá! Segue sua simulação de saque disponível 👇');
+    const num = phone.replace(/\D/g, '');
+    const waUrl = num ? `https://wa.me/55${num}?text=${txt}` : `https://wa.me/?text=${txt}`;
+    setTimeout(() => window.open(waUrl, '_blank'), 800);
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center">
               <ImageIcon size={18} className="text-emerald-400" />
             </div>
             <div>
               <h2 className="font-bold text-slate-100 text-lg">Gerar Imagem de Oferta</h2>
-              <p className="text-slate-400 text-xs">Imagem personalizada para WhatsApp</p>
+              <p className="text-slate-400 text-xs">Imagem 1080×1920 otimizada para WhatsApp</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors">
@@ -494,104 +307,79 @@ export const OfferImageGenerator: React.FC<OfferImageGeneratorProps> = ({ lead, 
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-0 overflow-auto">
-          {/* Controls */}
-          <div className="md:w-64 p-5 border-r border-slate-800 flex flex-col gap-4 shrink-0">
+        <div className="flex flex-col md:flex-row overflow-auto flex-1 min-h-0">
+          {/* Controls - 30% */}
+          <div className="md:w-72 p-5 border-r border-slate-800 flex flex-col gap-4 shrink-0 overflow-y-auto">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Dados da Oferta</h3>
-
+            {[
+              { label: 'Nome', val: nome, set: setNome, type: 'text' },
+              { label: 'Banco', val: banco, set: setBanco, type: 'text' },
+            ].map(({ label, val, set, type }) => (
+              <div key={label}>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">{label}</label>
+                <input type={type} value={val as string} onChange={e => (set as any)(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" />
+              </div>
+            ))}
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Nome do Cliente</label>
-              <input
-                type="text"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Banco</label>
-              <input
-                type="text"
-                value={banco}
-                onChange={e => setBanco(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
-                Valor (R$) — atual: {formatBRL(valor)}
-              </label>
-              <input
-                type="number"
-                value={valor}
-                step="0.01"
-                min="0"
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Valor — {fmtBRL(valor)}</label>
+              <input type="number" value={valor} step="0.01" min="0"
                 onChange={e => setValor(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
 
-            <button
-              onClick={generate}
-              disabled={isGenerating}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              {isGenerating ? (
-                <><Loader2 size={16} className="animate-spin" /> Gerando...</>
-              ) : (
-                <><ImageIcon size={16} /> Gerar Imagem</>
-              )}
+            {/* Bank theme preview */}
+            <div className="rounded-lg p-3 border border-slate-700 bg-slate-800/50">
+              <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Tema do banco detectado</p>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full" style={{ backgroundColor: getTheme(banco).primary }} />
+                <span className="text-xs text-slate-300 capitalize">{banco}</span>
+              </div>
+            </div>
+
+            <button onClick={generate} disabled={isGenerating}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95">
+              {isGenerating ? <><Loader2 size={16} className="animate-spin" />Gerando...</> : <><ImageIcon size={16} />Gerar Imagem</>}
             </button>
 
             {imageUrl && (
-              <>
-                <button
-                  onClick={download}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
-                >
-                  <Download size={15} /> Baixar PNG
+              <div className="flex flex-col gap-2">
+                <button onClick={download} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-all">
+                  <Download size={15} />Baixar PNG
                 </button>
-                <button
-                  onClick={copyToClipboard}
-                  className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
-                >
+                <button onClick={copyImg} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-all">
                   📋 Copiar Imagem
                 </button>
-              </>
+                <button onClick={sendWhatsApp} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm transition-all">
+                  <Send size={15} />Enviar WhatsApp
+                </button>
+              </div>
             )}
-
-            <div className="mt-auto pt-4 border-t border-slate-800">
-              <p className="text-[10px] text-slate-500 leading-relaxed">
-                💡 A imagem será gerada com os dados acima. Você pode editar os campos e clicar em <strong className="text-slate-400">Gerar Imagem</strong> novamente para atualizar.
-              </p>
-            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed mt-auto pt-4 border-t border-slate-800">
+              💡 O tema muda automaticamente conforme o banco. Clique em <strong className="text-slate-400">Gerar Imagem</strong> para visualizar.
+            </p>
           </div>
 
-          {/* Preview */}
-          <div className="flex-1 p-5 flex flex-col items-center justify-start gap-3 overflow-auto bg-slate-950/50 min-h-[400px]">
+          {/* Preview - 70% */}
+          <div className="flex-1 p-6 flex flex-col items-center bg-slate-950/50 overflow-auto">
             {!imageUrl && !isGenerating && (
-              <div className="flex flex-col items-center justify-center h-full gap-4 py-16 text-slate-500">
-                <ImageIcon size={48} className="text-slate-700" />
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-600">
+                <ImageIcon size={56} className="text-slate-800" />
                 <p className="text-sm">Clique em <strong className="text-slate-400">Gerar Imagem</strong> para visualizar</p>
               </div>
             )}
             {isGenerating && (
-              <div className="flex flex-col items-center justify-center h-full gap-4 py-16 text-slate-500">
-                <Loader2 size={40} className="animate-spin text-emerald-500" />
-                <p className="text-sm text-slate-400">Gerando imagem...</p>
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <Loader2 size={44} className="animate-spin text-emerald-500" />
+                <p className="text-sm text-slate-400">Gerando imagem 1080×1920...</p>
               </div>
             )}
             {imageUrl && !isGenerating && (
               <>
-                <p className="text-xs text-slate-500 self-start">Pré-visualização</p>
-                <img
-                  src={imageUrl}
-                  alt="Oferta gerada"
+                <p className="text-xs text-slate-500 self-start mb-3">Pré-visualização • 1080×1920px</p>
+                <img src={imageUrl} alt="Oferta"
                   className="max-w-full rounded-xl shadow-2xl border border-slate-800"
-                  style={{ maxHeight: '70vh', objectFit: 'contain' }}
-                />
+                  style={{ maxHeight: '75vh', objectFit: 'contain' }} />
               </>
             )}
           </div>
@@ -599,4 +387,10 @@ export const OfferImageGenerator: React.FC<OfferImageGeneratorProps> = ({ lead, 
       </div>
     </div>
   );
+
+  function getTheme(b: string) {
+    const k = b.toLowerCase();
+    for (const [key, t] of Object.entries(BANK_THEMES)) { if (k.includes(key)) return t; }
+    return BANK_THEMES.default;
+  }
 };

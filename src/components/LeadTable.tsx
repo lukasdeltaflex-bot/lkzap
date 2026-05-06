@@ -86,7 +86,7 @@ export const LeadTable = () => {
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'asc' | 'desc' | null }>({ key: null, direction: null });
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [offerLead, setOfferLead] = useState<{ name: string; availableValue: number; bank: string } | null>(null);
+  const [offerLead, setOfferLead] = useState<{ name: string; availableValue: number; bank: string; phone?: string } | null>(null);
 
   // Column resizing state
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -991,7 +991,7 @@ export const LeadTable = () => {
                         <div className="inline-flex gap-1 flex-wrap">
                           <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-95" title="Enviar WhatsApp"><Send size={16} /></button>
                           <button 
-                            onClick={() => setOfferLead({ name: lead.name, availableValue: lead.availableValue, bank: lead.bank })} 
+                            onClick={() => setOfferLead({ name: lead.name, availableValue: lead.availableValue, bank: lead.bank, phone: lead.phone })} 
                             className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 dark:bg-amber-900/20 transition-all" 
                             title="Gerar Imagem de Oferta"
                           ><ImageIcon size={16} /></button>
