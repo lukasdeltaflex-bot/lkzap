@@ -226,10 +226,10 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Banco</label>
-                <select value={bank} onChange={e => setBank(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold">
-                  <option value="">Selecione</option>
+                <select value={bank} onChange={e => setBank(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold dark:text-slate-100">
+                  <option value="" className="dark:bg-slate-800">Selecione</option>
                   {banks.map((b: Bank) => (
-                    <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                    <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name} className="dark:bg-slate-800">
                       {typeof b === 'string' ? b : b.name}
                     </option>
                   ))}
@@ -243,16 +243,16 @@ export const UraImportModal = ({ isOpen, onClose }: Props) => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Origem</label>
-                <select value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold">
-                  {origins.includes(origin) ? null : <option value={origin}>{origin}</option>}
-                  {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                <select value={origin} onChange={e => setOrigin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-bold dark:text-slate-100">
+                  {origins.includes(origin) ? null : <option value={origin} className="dark:bg-slate-800">{origin}</option>}
+                  {origins.map((o: string) => <option key={o} value={o} className="dark:bg-slate-800">{o}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 px-1 tracking-widest">Status</label>
-                <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-black">
-                  {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none font-black dark:text-slate-100">
+                  {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name} className="dark:bg-slate-800">{s.name}</option>)}
                 </select>
               </div>
 

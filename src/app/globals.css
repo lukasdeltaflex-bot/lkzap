@@ -48,6 +48,21 @@ input, select, textarea {
   @apply dark:placeholder-slate-500;
 }
 
+/* Fix dropdown contrast */
+select option {
+  @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-white;
+}
+
+/* Custom Resize Handle */
+.resize-handle {
+  @apply absolute top-0 -right-1 w-2 h-full cursor-col-resize z-20 transition-colors duration-150;
+  background: transparent;
+}
+
+.resize-handle:hover, .resize-handle.active {
+  @apply bg-emerald-500/30;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

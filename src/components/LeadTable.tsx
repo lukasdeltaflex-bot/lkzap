@@ -106,10 +106,12 @@ export const LeadTable = () => {
     const onMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
       const delta = e.clientX - resizingRef.current.startX;
-      const newWidth = Math.max(80, resizingRef.current.startWidth + delta);
+      const newWidth = Math.max(60, resizingRef.current.startWidth + delta);
       setColumnWidths(prev => {
         const copy = [...prev];
-        copy[resizingRef.current!.index] = newWidth;
+        if (resizingRef.current) {
+          copy[resizingRef.current.index] = newWidth;
+        }
         return copy;
       });
     };
@@ -456,15 +458,15 @@ export const LeadTable = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:bg-slate-800">
               <option value="">(Todos)</option>
-              {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name}>{s.name}</option>)}
+              {leadStatuses.map((s: LeadStatusConfig) => <option key={s.id} value={s.name} className="bg-white dark:bg-slate-800">{s.name}</option>)}
             </select>
           </div>
           
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Fila</label>
-            <select value={filterQueue} onChange={(e) => setFilterQueue(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+            <select value={filterQueue} onChange={(e) => setFilterQueue(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:bg-slate-800">
               <option value="">(Todas)</option>
               <option value="Pronto para enviar">Pronto para enviar</option>
               <option value="Aguardando">Aguardando</option>
@@ -475,7 +477,7 @@ export const LeadTable = () => {
           
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Banco</label>
-            <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+            <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:bg-slate-800">
               <option value="">(Todos)</option>
               {banks.map((bank: Bank) => (
                 <option key={typeof bank === 'string' ? bank : bank.id} value={typeof bank === 'string' ? bank : bank.name}>{typeof bank === 'string' ? bank : bank.name}</option>
@@ -485,7 +487,7 @@ export const LeadTable = () => {
           
           <div className="flex flex-col">
             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Origem</label>
-            <select value={filterOrigin} onChange={(e) => setFilterOrigin(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+            <select value={filterOrigin} onChange={(e) => setFilterOrigin(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100 dark:bg-slate-800">
               <option value="">(Todas)</option>
               {origins.map((origin: string) => <option key={origin} value={origin}>{origin}</option>)}
             </select>
@@ -501,7 +503,7 @@ export const LeadTable = () => {
           
           <div className="flex flex-col">
              <label className="text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo de Data</label>
-             <select value={filterDateType} onChange={e => setFilterDateType(e.target.value)} className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
+             <select value={filterDateType} onChange={e => setFilterDateType(e.target.value)} className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100">
                <option value="cadastro">Data de cadastro</option>
                <option value="atualizacao">Data de atualização</option>
              </select>
@@ -591,7 +593,11 @@ export const LeadTable = () => {
                         <span>{col}</span>
                       )}
                       {idx < columns.length - 1 && (
-                        <div onMouseDown={(e) => startResize(e, idx)} className="w-2 h-6 cursor-col-resize" title="Arrastar para redimensionar" />
+                        <div 
+                          onMouseDown={(e) => startResize(e, idx)} 
+                          className="resize-handle" 
+                          title="Arrastar para redimensionar" 
+                        />
                       )}
                     </div>
                   </th>
@@ -631,10 +637,10 @@ export const LeadTable = () => {
                           <select 
                             value={lead.origin || ''}
                             onChange={(e) => updateLead(lead.id, { origin: e.target.value })}
-                            className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded px-1 py-0.5 outline-none cursor-pointer uppercase"
+                            className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded px-1 py-0.5 outline-none cursor-pointer uppercase dark:text-slate-100"
                           >
-                            <option value="">(Sem Origem)</option>
-                            {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                            <option value="" className="dark:bg-slate-800">(Sem Origem)</option>
+                            {origins.map((o: string) => <option key={o} value={o} className="dark:bg-slate-800">{o}</option>)}
                           </select>
                           {(lead.tags || []).map((tagId: string) => {
                             const tag = useSettingsStore.getState().tags.find((t: any) => t.id === tagId);
@@ -673,10 +679,10 @@ export const LeadTable = () => {
                         <select 
                           value={lead.bank}
                           onChange={(e) => updateLead(lead.id, { bank: e.target.value })}
-                          className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-24"
+                          className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-24 dark:bg-slate-900"
                         >
                            {banks.map((b: Bank) => (
-                             <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                             <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name} className="dark:bg-slate-800">
                                {typeof b === 'string' ? b : b.name}
                              </option>
                            ))}
@@ -727,12 +733,12 @@ export const LeadTable = () => {
                         <select 
                           value={lead.queue}
                           onChange={(e) => updateLead(lead.id, { queue: e.target.value as any })}
-                          className="text-[10px] font-bold text-slate-500 bg-transparent border-none outline-none p-0 ml-1 cursor-pointer w-28"
+                          className="text-[10px] font-bold text-slate-500 bg-transparent border-none outline-none p-0 ml-1 cursor-pointer w-28 dark:bg-slate-900"
                         >
-                          <option value="Pronto para enviar">Pronto para enviar</option>
-                          <option value="Aguardando">Aguardando</option>
-                          <option value="Frio">Frio</option>
-                          <option value="Reabordar">Reabordar</option>
+                          <option value="Pronto para enviar" className="dark:bg-slate-800">Pronto para enviar</option>
+                          <option value="Aguardando" className="dark:bg-slate-800">Aguardando</option>
+                          <option value="Frio" className="dark:bg-slate-800">Frio</option>
+                          <option value="Reabordar" className="dark:bg-slate-800">Reabordar</option>
                         </select>
                       </div>
                     </td>
@@ -742,11 +748,11 @@ export const LeadTable = () => {
                           <select 
                             value={lead.selectedTemplateId || (messageTemplates.find((t: MessageTemplate) => t.isDefault)?.id || '')}
                             onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
-                            className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px]"
+                            className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px] dark:text-slate-100"
                           >
-                            <option value="">Padrão</option>
+                            <option value="" className="dark:bg-slate-800">Padrão</option>
                             {messageTemplates.map((tmpl: MessageTemplate) => (
-                              <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                              <option key={tmpl.id} value={tmpl.id} className="dark:bg-slate-800">{tmpl.name}</option>
                             ))}
                           </select>
                         </div>
