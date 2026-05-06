@@ -28,6 +28,8 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
   const [templateId, setTemplateId] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (lead) {
@@ -66,11 +68,16 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
     return formatted;
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    setErrorMessage(null);
+    
+    if (!canSubmit) {
+      setErrorMessage("Por favor, preencha todos os campos obrigatórios corretamente.");
+      return;
+    }
 
-    updateLead(lead.id, {
+    const updatedData = {
       name,
       cpf: normalizeCPF(cpf),
       phone: normalizePhone(phone),
@@ -82,9 +89,20 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
       selectedTemplateId: templateId || undefined,
       notes,
       tags: selectedTags
-    });
+    };
 
-    onClose();
+    console.log("Salvando lead:", lead.id, updatedData);
+    setIsSaving(true);
+
+    try {
+      await updateLead(lead.id, updatedData);
+      onClose();
+    } catch (error) {
+      console.error("Erro ao salvar edição do lead:", error);
+      setErrorMessage("Erro ao salvar no servidor. Tente novamente.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -205,9 +223,26 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 p-3 rounded-lg text-xs font-bold border border-rose-100 dark:border-rose-800 animate-in shake duration-300">
+              {errorMessage}
+            </div>
+          )}
+
           <div className="pt-6 flex gap-3">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100">Cancelar</button>
-            <button type="submit" disabled={!canSubmit} className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-black transition-all">Salvar Alterações</button>
+            <button 
+              type="submit" 
+              disabled={isSaving || !canSubmit} 
+              className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-black transition-all flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Salvando...
+                </>
+              ) : 'Salvar Alterações'}
+            </button>
           </div>
         </form>
       </div>

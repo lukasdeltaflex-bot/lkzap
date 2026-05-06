@@ -25,7 +25,7 @@ interface LeadStore {
   // Actions
   setDashboardFilter: (filter: string | null) => void;
   addLead: (lead: Omit<Lead, 'id'>) => void;
-  updateLead: (id: string, data: Partial<Lead>) => void;
+  updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   deleteLead: (id: string) => void;
   incrementSendsToday: () => void;
   setCooldown: () => void;
@@ -68,46 +68,56 @@ export const useLeadStore = create<LeadStore>()(
         };
       }),
 
-      updateLead: (id, data) => set((state) => ({
-        leads: state.leads.map(lead => {
-          if (lead.id === id) {
-            const updatedData = { ...data };
-            const history: HistoryEntry[] = [...(lead.history || [])];
-            
-            // Record significant changes in history
-            if (data.availableValue !== undefined && data.availableValue !== lead.availableValue) {
-              updatedData.availableValueUpdatedAt = new Date().toISOString();
-              history.push({ 
-                action: `Valor alterado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.availableValue)} -> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.availableValue)}`, 
-                createdAt: new Date().toISOString() 
-              });
-            }
-            if (data.status && data.status !== lead.status) {
-              history.push({ action: `Status alterado: ${lead.status} -> ${data.status}`, createdAt: new Date().toISOString() });
-            }
-            if (data.bank && data.bank !== lead.bank) {
-              history.push({ action: `Banco alterado: ${lead.bank} -> ${data.bank}`, createdAt: new Date().toISOString() });
-            }
-            if (data.queue && data.queue !== lead.queue) {
-              history.push({ action: `Fila alterada: ${lead.queue} -> ${data.queue}`, createdAt: new Date().toISOString() });
-            }
-            if (data.lastSendDate && data.lastSendDate !== lead.lastSendDate) {
-              history.push({ action: 'Mensagem enviada', createdAt: new Date().toISOString() });
-            }
+      updateLead: async (id, data) => {
+        let updatedLeadRef: Lead | null = null;
+        
+        set((state) => {
+          const updatedLeads = state.leads.map(lead => {
+            if (lead.id === id) {
+              const updatedData = { ...data };
+              const history: HistoryEntry[] = [...(lead.history || [])];
+              
+              // Record significant changes in history
+              if (data.availableValue !== undefined && data.availableValue !== lead.availableValue) {
+                updatedData.availableValueUpdatedAt = new Date().toISOString();
+                history.push({ 
+                  action: `Valor alterado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.availableValue)} -> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.availableValue)}`, 
+                  createdAt: new Date().toISOString() 
+                });
+              }
+              if (data.status && data.status !== lead.status) {
+                history.push({ action: `Status alterado: ${lead.status} -> ${data.status}`, createdAt: new Date().toISOString() });
+              }
+              if (data.bank && data.bank !== lead.bank) {
+                history.push({ action: `Banco alterado: ${lead.bank} -> ${data.bank}`, createdAt: new Date().toISOString() });
+              }
+              if (data.queue && data.queue !== lead.queue) {
+                history.push({ action: `Fila alterada: ${lead.queue} -> ${data.queue}`, createdAt: new Date().toISOString() });
+              }
+              if (data.lastSendDate && data.lastSendDate !== lead.lastSendDate) {
+                history.push({ action: 'Mensagem enviada', createdAt: new Date().toISOString() });
+              }
 
-            const finalLead = { ...lead, ...updatedData, history };
-            
-            // Sync to firestore
-            if (auth?.currentUser && db) {
-              const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, id);
-              setDoc(leadRef, finalLead).catch(console.error);
+              const finalLead = { ...lead, ...updatedData, history };
+              updatedLeadRef = finalLead;
+              return finalLead;
             }
+            return lead;
+          });
+          return { leads: updatedLeads };
+        });
 
-            return finalLead;
+        // Sync to firestore with await as requested
+        if (updatedLeadRef && auth?.currentUser && db) {
+          try {
+            const leadRef = doc(db, `users/${auth.currentUser.uid}/leads`, id);
+            await setDoc(leadRef, updatedLeadRef);
+          } catch (error) {
+            console.error("Erro ao salvar edição do lead:", error);
+            throw error; // Re-throw to be handled by the UI
           }
-          return lead;
-        })
-      })),
+        }
+      },
 
       deleteLead: (id) => set((state) => {
         if (auth?.currentUser && db) {
