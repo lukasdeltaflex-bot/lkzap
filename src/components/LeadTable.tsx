@@ -81,6 +81,9 @@ export const LeadTable = () => {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkType, setBulkType] = useState<string>('');
   const [bulkValue, setBulkValue] = useState<string>('');
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'asc' | 'desc' | null }>({ key: null, direction: null });
+  const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Column resizing state
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -180,19 +183,63 @@ export const LeadTable = () => {
     });
   };
 
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      if (prev.key === key) {
+        if (prev.direction === 'asc') return { key, direction: 'desc' };
+        if (prev.direction === 'desc') return { key: null, direction: null };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(filteredLeads.map(l => l.id));
+    }
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedLeadIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+
+
   const isCooldownActive = !!(cooldownUntil && now < cooldownUntil);
   const cooldownSeconds = isCooldownActive ? Math.ceil((cooldownUntil - now) / 1000) : 0;
 
   const filteredLeads = useMemo(() => {
     if (!hydrated) return [];
-    return leads.filter(lead => {
+    
+    // 1. Filter
+    let result = leads.filter(lead => {
+      // Global search
       const matchesSearch = 
+        searchTerm === '' ||
         lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.cpf.includes(searchTerm) ||
         lead.phone.includes(searchTerm);
       
+      if (!matchesSearch) return false;
+
+      // Column specific search
+      const matchesColName = !columnSearch.nome || lead.name.toLowerCase().includes(columnSearch.nome.toLowerCase());
+      const matchesColWhatsapp = !columnSearch.whatsapp || lead.cpf.includes(columnSearch.whatsapp) || lead.phone.includes(columnSearch.whatsapp);
+      const matchesColBank = !columnSearch.banco || lead.bank.toLowerCase().includes(columnSearch.banco.toLowerCase());
+      
+      if (!matchesColName) return false;
+      if (!matchesColWhatsapp) return false;
+      if (!matchesColBank) return false;
+
+      // Applied filters
       const matchesBank = appliedFilters.bank === '' || lead.bank === appliedFilters.bank;
       const matchesOrigin = appliedFilters.origin === '' || lead.origin === appliedFilters.origin;
+      
+      if (!matchesBank || !matchesOrigin) return false;
       
       let matchesDate = true;
       if (appliedFilters.dateStart || appliedFilters.dateEnd) {
@@ -218,10 +265,86 @@ export const LeadTable = () => {
         const matchesQueue = appliedFilters.queue === '' || lead.queue === appliedFilters.queue;
         if (!matchesStatus || !matchesQueue || !matchesDate) return false;
       }
-
-      return matchesSearch && matchesBank && matchesOrigin && matchesDate;
+      
+      return matchesDate;
     });
-  }, [leads, searchTerm, appliedFilters, dashboardFilter, leadStatuses, hydrated]);
+
+    // 2. Sort
+    if (sortConfig.key && sortConfig.direction) {
+      result.sort((a, b) => {
+        let valA: any = (a as any)[sortConfig.key!];
+        let valB: any = (b as any)[sortConfig.key!];
+
+        // Custom mappings
+        if (sortConfig.key === 'nome') { valA = a.name; valB = b.name; }
+        if (sortConfig.key === 'whatsapp') { valA = a.phone; valB = b.phone; }
+        if (sortConfig.key === 'valor') { valA = a.availableValue; valB = b.availableValue; }
+        if (sortConfig.key === 'status') { valA = a.status; valB = b.status; }
+        if (sortConfig.key === 'banco') { valA = a.bank; valB = b.bank; }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [leads, searchTerm, appliedFilters, hydrated, columnSearch, sortConfig, dashboardFilter]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input/select/textarea
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+         if (e.key === 'Escape') {
+           (e.target as HTMLElement).blur();
+         }
+         return;
+      }
+
+      // Ctrl + K -> Search
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+
+      // Ctrl + A -> Select All
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault();
+        setSelectedLeadIds(filteredLeads.map(l => l.id));
+      }
+
+      // Esc -> Clear selection
+      if (e.key === 'Escape') {
+        setSelectedLeadIds([]);
+      }
+
+      // Delete -> Delete selected
+      if (e.key === 'Delete' && selectedLeadIds.length > 0) {
+        if (confirm(`Excluir ${selectedLeadIds.length} leads selecionados?`)) {
+          bulkDeleteLeads(selectedLeadIds);
+          setSelectedLeadIds([]);
+        }
+      }
+
+      // Enter -> Edit (if 1 selected)
+      if (e.key === 'Enter' && selectedLeadIds.length === 1) {
+        const lead = leads.find(l => l.id === selectedLeadIds[0]);
+        if (lead) {
+          setCurrentLead(lead);
+          setIsEditModalOpen(true);
+        }
+      }
+
+      // Ctrl + Shift + E -> Bulk Edit
+      if (e.ctrlKey && e.shiftKey && e.key === 'E' && selectedLeadIds.length > 0) {
+        e.preventDefault();
+        setIsBulkModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredLeads, selectedLeadIds, leads, bulkDeleteLeads]);
 
   const applyFilters = () => {
     setDashboardFilter(null);
@@ -400,19 +523,7 @@ export const LeadTable = () => {
 
   const columns = ['', 'Nome / Origem','WhatsApp','Banco','Valor','Status / Fila','Ações'];
 
-  const toggleSelectAll = () => {
-    if (selectedLeadIds.length === filteredLeads.length) {
-      setSelectedLeadIds([]);
-    } else {
-      setSelectedLeadIds(filteredLeads.map(l => l.id));
-    }
-  };
 
-  const toggleSelectRow = (id: string) => {
-    setSelectedLeadIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
 
   const handleBulkAction = (type: string) => {
     setBulkType(type);
@@ -455,13 +566,34 @@ export const LeadTable = () => {
   return (
     <div className="flex flex-col gap-4">
       {/* Search and Advanced Filters */}
+      {/* Bulk Action Bar */}
+      {selectedLeadIds.length > 0 && (
+        <div className="bg-emerald-600 text-white p-3 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 px-3 py-1 rounded-full font-bold text-sm">
+              {selectedLeadIds.length} selecionados
+            </div>
+            <button onClick={() => setSelectedLeadIds([])} className="text-emerald-100 hover:text-white text-sm font-medium">Limpar seleção</button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+             <button onClick={() => handleBulkAction('bank')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Banco</button>
+             <button onClick={() => handleBulkAction('status')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Status</button>
+             <button onClick={() => handleBulkAction('queue')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Fila</button>
+             <button onClick={() => handleBulkAction('origin')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Origem</button>
+             <button onClick={confirmBulkDelete} className="bg-red-500/20 hover:bg-red-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-red-500/30 text-red-100">Excluir</button>
+          </div>
+        </div>
+      )}
+
       <div className="glass-panel p-4 rounded-xl flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
+              ref={searchInputRef}
               type="text"
-              placeholder="Buscar por nome, CPF ou telefone..."
+              placeholder="Buscar por nome, CPF ou telefone... (Ctrl+K)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
@@ -632,34 +764,61 @@ export const LeadTable = () => {
             </colgroup>
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
-                {COLUMN_KEYS.map((key, idx) => (
-                  <th 
-                    key={key} 
-                    data-col={key}
-                    className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${key === 'banco' ? 'text-right' : ''}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      {key === 'selection' ? (
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
-                          checked={selectedLeadIds.length > 0 && selectedLeadIds.length === filteredLeads.length}
-                          onChange={toggleSelectAll}
-                        />
-                      ) : (
-                        <span>{columns[idx]}</span>
-                      )}
-                      {idx < COLUMN_KEYS.length - 1 && (
-                        <div 
-                          onMouseDown={(e) => startResize(e, key)} 
-                          onDoubleClick={() => handleAutoFit(key)}
-                          className="resize-handle" 
-                          title="Arraste para redimensionar / Duplo clique para auto-ajuste" 
-                        />
-                      )}
-                    </div>
-                  </th>
-                ))}
+                {COLUMN_KEYS.map((key, idx) => {
+                  const isSticky = idx <= 2;
+                  let stickyLeft = 0;
+                  if (idx === 1) stickyLeft = columnWidths.selection || 50;
+                  if (idx === 2) stickyLeft = (columnWidths.selection || 50) + (columnWidths.nome || 320);
+
+                  return (
+                    <th 
+                      key={key} 
+                      data-col={key}
+                      style={isSticky ? { position: 'sticky', left: `${stickyLeft}px`, zIndex: 30 } : {}}
+                      className={`px-4 py-3 relative border-r border-slate-200/30 dark:border-slate-700/40 ${key === 'banco' ? 'text-right' : ''} ${isSticky ? 'bg-slate-50 dark:bg-slate-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : 'bg-slate-50/50 dark:bg-slate-800/50'}`}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => key !== 'selection' && key !== 'acoes' && handleSort(key)}>
+                            {key === 'selection' ? (
+                              <input 
+                                type="checkbox" 
+                                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                                checked={selectedLeadIds.length > 0 && selectedLeadIds.length === filteredLeads.length}
+                                onChange={toggleSelectAll}
+                              />
+                            ) : (
+                              <span className="group-hover:text-emerald-500 transition-colors">{columns[idx]}</span>
+                            )}
+                            {sortConfig.key === key && (
+                              <span className="text-emerald-500">
+                                {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                          {idx < COLUMN_KEYS.length - 1 && (
+                            <div 
+                              onMouseDown={(e) => startResize(e, key)} 
+                              onDoubleClick={() => handleAutoFit(key)}
+                              className="resize-handle" 
+                              title="Arraste para redimensionar / Duplo clique para auto-ajuste" 
+                            />
+                          )}
+                        </div>
+                        {['nome', 'whatsapp', 'banco'].includes(key) && (
+                           <input 
+                             type="text"
+                             placeholder="Filtrar..."
+                             value={columnSearch[key] || ''}
+                             onChange={(e) => setColumnSearch(prev => ({ ...prev, [key]: e.target.value }))}
+                             className="w-full text-[10px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500 font-normal normal-case"
+                             onClick={(e) => e.stopPropagation()}
+                           />
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -675,8 +834,12 @@ export const LeadTable = () => {
                 </tr>
               ) : (
                 filteredLeads.map((lead) => (
-                  <tr key={lead.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
-                    <td data-col="selection" className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center">
+                  <tr key={lead.id} className={`hover:bg-slate-800/60 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-500/10 border-emerald-500/30' : ''}`}>
+                    <td 
+                      data-col="selection" 
+                      style={{ position: 'sticky', left: '0', zIndex: 10 }}
+                      className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                    >
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
@@ -684,7 +847,11 @@ export const LeadTable = () => {
                         onChange={() => toggleSelectRow(lead.id)}
                       />
                     </td>
-                    <td data-col="nome" className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td 
+                      data-col="nome" 
+                      style={{ position: 'sticky', left: `${columnWidths.selection || 50}px`, zIndex: 10 }}
+                      className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                    >
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
@@ -712,7 +879,11 @@ export const LeadTable = () => {
                         </div>
                       </div>
                     </td>
-                    <td data-col="whatsapp" className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td 
+                      data-col="whatsapp" 
+                      style={{ position: 'sticky', left: `${(columnWidths.selection || 50) + (columnWidths.nome || 320)}px`, zIndex: 10 }}
+                      className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                    >
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-mono text-slate-400">{formatCPF(lead.cpf)}</span>
