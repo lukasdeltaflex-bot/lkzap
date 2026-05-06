@@ -33,8 +33,18 @@ import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
 import { UraImportModal } from './UraImportModal';
 
-const LOCALSTORAGE_KEY = 'lkzap_table_column_widths_v1';
-const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
+const LOCALSTORAGE_KEY = 'lkzap:table:columnWidths';
+const DEFAULT_WIDTHS: Record<string, number> = {
+  selection: 50,
+  nome: 320,
+  whatsapp: 170,
+  banco: 140,
+  valor: 120,
+  status: 200,
+  acoes: 160
+};
+
+const COLUMN_KEYS = ['selection', 'nome', 'whatsapp', 'banco', 'valor', 'status', 'acoes'];
 
 export const LeadTable = () => {
   const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter, bulkUpdateLeads, bulkDeleteLeads } = useLeadStore();
@@ -73,19 +83,22 @@ export const LeadTable = () => {
   const [bulkValue, setBulkValue] = useState<string>('');
 
   // Column resizing state
-  const [columnWidths, setColumnWidths] = useState<number[]>(() => {
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     try {
       const raw = localStorage.getItem(LOCALSTORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_WIDTHS.length) return parsed;
+        if (typeof parsed === 'object' && parsed !== null) {
+          return { ...DEFAULT_WIDTHS, ...parsed };
+        }
       }
     } catch (e) {
       // ignore
     }
-    return [50, 320, 170, 120, 120, 200, 160];
+    return DEFAULT_WIDTHS;
   });
-  const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+  const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+  const guideLineRef = useRef<HTMLDivElement>(null);
 
   const getBankInfo = (bankName: string) => {
     return banks.find((b: Bank) => (typeof b === 'string' ? b : b.name) === bankName);
@@ -105,33 +118,66 @@ export const LeadTable = () => {
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
+      
       const delta = e.clientX - resizingRef.current.startX;
-      const newWidth = Math.max(60, resizingRef.current.startWidth + delta);
+      const newWidth = Math.min(500, Math.max(80, resizingRef.current.startWidth + delta));
+      
+      // Update guide line position
+      if (guideLineRef.current) {
+        guideLineRef.current.style.left = `${e.clientX}px`;
+      }
+
       setColumnWidths(prev => {
-        const copy = [...prev];
-        if (resizingRef.current) {
-          copy[resizingRef.current.index] = newWidth;
-        }
-        return copy;
+        const next = { ...prev, [resizingRef.current!.key]: newWidth };
+        // Save immediately as requested
+        try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(next)); } catch (err) {}
+        return next;
       });
     };
+
     const onMouseUp = () => {
       if (resizingRef.current) {
-        try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(columnWidths)); } catch (e) {}
+        document.body.style.cursor = "default";
+        if (guideLineRef.current) {
+          guideLineRef.current.classList.remove('visible');
+        }
       }
       resizingRef.current = null;
     };
+
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [columnWidths]);
+  }, []);
 
-  const startResize = (e: React.MouseEvent, index: number) => {
-    resizingRef.current = { index, startX: e.clientX, startWidth: columnWidths[index] };
+  const startResize = (e: React.MouseEvent, key: string) => {
+    resizingRef.current = { key, startX: e.clientX, startWidth: columnWidths[key] || 100 };
+    document.body.style.cursor = "col-resize";
+    
+    if (guideLineRef.current) {
+      guideLineRef.current.style.left = `${e.clientX}px`;
+      guideLineRef.current.classList.add('visible');
+    }
+    
     e.preventDefault();
+  };
+
+  const handleAutoFit = (key: string) => {
+    const cells = document.querySelectorAll(`[data-col="${key}"]`);
+    let maxWidth = 80;
+    cells.forEach(cell => {
+      maxWidth = Math.max(maxWidth, (cell as HTMLElement).scrollWidth);
+    });
+    
+    const newWidth = Math.min(500, maxWidth + 32);
+    setColumnWidths(prev => {
+      const next = { ...prev, [key]: newWidth };
+      try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(next)); } catch (err) {}
+      return next;
+    });
   };
 
   const isCooldownActive = !!(cooldownUntil && now < cooldownUntil);
@@ -573,16 +619,27 @@ export const LeadTable = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left table-fixed">
             <colgroup>
-              {columnWidths.map((w: number, idx: number) => (
-                <col key={idx} style={{ width: `${w}px`, minWidth: '80px' }} />
+              {COLUMN_KEYS.map((key) => (
+                <col 
+                  key={key} 
+                  style={{ 
+                    width: `${columnWidths[key] || 100}px`, 
+                    minWidth: '80px',
+                    transition: resizingRef.current ? 'none' : 'width 0.1s ease'
+                  }} 
+                />
               ))}
             </colgroup>
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
-                {columns.map((col: string, idx: number) => (
-                  <th key={col} className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${idx === 3 ? 'text-right' : ''}`}>
+                {COLUMN_KEYS.map((key, idx) => (
+                  <th 
+                    key={key} 
+                    data-col={key}
+                    className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${key === 'banco' ? 'text-right' : ''}`}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      {idx === 0 ? (
+                      {key === 'selection' ? (
                         <input 
                           type="checkbox" 
                           className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
@@ -590,13 +647,14 @@ export const LeadTable = () => {
                           onChange={toggleSelectAll}
                         />
                       ) : (
-                        <span>{col}</span>
+                        <span>{columns[idx]}</span>
                       )}
-                      {idx < columns.length - 1 && (
+                      {idx < COLUMN_KEYS.length - 1 && (
                         <div 
-                          onMouseDown={(e) => startResize(e, idx)} 
+                          onMouseDown={(e) => startResize(e, key)} 
+                          onDoubleClick={() => handleAutoFit(key)}
                           className="resize-handle" 
-                          title="Arrastar para redimensionar" 
+                          title="Arraste para redimensionar / Duplo clique para auto-ajuste" 
                         />
                       )}
                     </div>
@@ -618,7 +676,7 @@ export const LeadTable = () => {
               ) : (
                 filteredLeads.map((lead) => (
                   <tr key={lead.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
-                    <td className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center">
+                    <td data-col="selection" className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center">
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
@@ -626,7 +684,7 @@ export const LeadTable = () => {
                         onChange={() => toggleSelectRow(lead.id)}
                       />
                     </td>
-                    <td className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="nome" className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
                           {lead.name}
@@ -654,7 +712,7 @@ export const LeadTable = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="whatsapp" className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-mono text-slate-400">{formatCPF(lead.cpf)}</span>
@@ -666,7 +724,7 @@ export const LeadTable = () => {
                         <span className="font-bold text-slate-700 dark:text-slate-200 text-xs mt-1">{formatDisplayPhone(lead.phone)}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="banco" className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex items-center gap-2.5">
                         {getBankInfo(lead.bank)?.logo ? (
                           <div className="w-9 h-9 min-w-[36px] rounded-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/50 flex items-center justify-center overflow-hidden">
@@ -679,7 +737,7 @@ export const LeadTable = () => {
                         <select 
                           value={lead.bank}
                           onChange={(e) => updateLead(lead.id, { bank: e.target.value })}
-                          className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-24 dark:bg-slate-900"
+                          className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-transparent border-none outline-none p-0 cursor-pointer w-full dark:bg-slate-900"
                         >
                            {banks.map((b: Bank) => (
                              <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name} className="dark:bg-slate-800">
@@ -689,7 +747,7 @@ export const LeadTable = () => {
                         </select>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="valor" className="px-6 py-5 text-right font-black text-emerald-600 dark:text-emerald-400 text-base border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col items-end">
                         <input 
                           type="text"
@@ -698,7 +756,7 @@ export const LeadTable = () => {
                             e.target.value = formatBRL(e.target.value);
                           }}
                           onBlur={(e) => handleQuickEditValue(lead, e.target.value)}
-                          className={`bg-transparent border-none outline-none text-right font-black text-base w-28 focus:ring-1 focus:ring-emerald-500 rounded px-1 ${
+                          className={`bg-transparent border-none outline-none text-right font-black text-base w-full focus:ring-1 focus:ring-emerald-500 rounded px-1 ${
                              lead.availableValue > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
                           }`}
                         />
@@ -714,7 +772,7 @@ export const LeadTable = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="status" className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col gap-1.5 min-w-[140px]">
                         <select 
                           value={lead.status}
@@ -733,7 +791,7 @@ export const LeadTable = () => {
                         <select 
                           value={lead.queue}
                           onChange={(e) => updateLead(lead.id, { queue: e.target.value as any })}
-                          className="text-[10px] font-bold text-slate-500 bg-transparent border-none outline-none p-0 ml-1 cursor-pointer w-28 dark:bg-slate-900"
+                          className="text-[10px] font-bold text-slate-500 bg-transparent border-none outline-none p-0 ml-1 cursor-pointer w-full dark:bg-slate-900"
                         >
                           <option value="Pronto para enviar" className="dark:bg-slate-800">Pronto para enviar</option>
                           <option value="Aguardando" className="dark:bg-slate-800">Aguardando</option>
@@ -742,13 +800,13 @@ export const LeadTable = () => {
                         </select>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
+                    <td data-col="acoes" className="px-6 py-5 text-right whitespace-nowrap border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="inline-flex flex-col items-start mr-3 align-middle">
                         <div className="mb-2">
                           <select 
                             value={lead.selectedTemplateId || (messageTemplates.find((t: MessageTemplate) => t.isDefault)?.id || '')}
                             onChange={(e) => updateLead(lead.id, { selectedTemplateId: e.target.value })}
-                            className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer min-w-[120px] dark:text-slate-100"
+                            className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/50 cursor-pointer w-full dark:text-slate-100"
                           >
                             <option value="" className="dark:bg-slate-800">Padrão</option>
                             {messageTemplates.map((tmpl: MessageTemplate) => (
@@ -771,6 +829,8 @@ export const LeadTable = () => {
           </table>
         </div>
       </div>
+
+      <div id="resize-line" ref={guideLineRef} />
 
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
       <EditLeadModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} lead={currentLead} />

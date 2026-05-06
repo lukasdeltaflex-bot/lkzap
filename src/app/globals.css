@@ -55,12 +55,21 @@ select option {
 
 /* Custom Resize Handle */
 .resize-handle {
-  @apply absolute top-0 -right-1 w-2 h-full cursor-col-resize z-20 transition-colors duration-150;
+  @apply absolute top-0 -right-1 w-2.5 h-full cursor-col-resize z-20 transition-colors duration-150;
   background: transparent;
 }
 
 .resize-handle:hover, .resize-handle.active {
-  @apply bg-emerald-500/30;
+  @apply bg-emerald-500/20;
+}
+
+/* Resize Guide Line */
+#resize-line {
+  @apply fixed top-0 bottom-0 w-[2px] bg-emerald-500 pointer-events-none z-[9999] hidden;
+}
+
+#resize-line.visible {
+  @apply block;
 }
 
 /* Scrollbar */
