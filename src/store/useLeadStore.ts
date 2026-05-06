@@ -34,6 +34,8 @@ interface LeadStore {
   resetSendsIfNewDay: () => void;
   syncLeads: () => Promise<void>;
   setLeads: (leads: Lead[]) => void;
+  bulkUpdateLeads: (ids: string[], data: Partial<Lead>) => void;
+  bulkDeleteLeads: (ids: string[]) => void;
 }
 
 export const useLeadStore = create<LeadStore>()(
@@ -195,7 +197,55 @@ export const useLeadStore = create<LeadStore>()(
         } catch (error) {
           console.error("Erro ao sincronizar leads:", error);
         }
-      }
+      },
+
+      bulkUpdateLeads: (ids, data) => set((state) => {
+        const now = new Date().toISOString();
+        const updatedLeads = state.leads.map(lead => {
+          if (ids.includes(lead.id)) {
+            const updatedData = { ...data };
+            const history: HistoryEntry[] = [...(lead.history || [])];
+
+            if (data.status && data.status !== lead.status) {
+              history.push({ action: `[Massa] Status: ${lead.status} -> ${data.status}`, createdAt: now });
+            }
+            if (data.bank && data.bank !== lead.bank) {
+              history.push({ action: `[Massa] Banco: ${lead.bank} -> ${data.bank}`, createdAt: now });
+            }
+            if (data.queue && data.queue !== lead.queue) {
+              history.push({ action: `[Massa] Fila: ${lead.queue} -> ${data.queue}`, createdAt: now });
+            }
+            if (data.origin && data.origin !== lead.origin) {
+              history.push({ action: `[Massa] Origem: ${lead.origin} -> ${data.origin}`, createdAt: now });
+            }
+            if (data.selectedTemplateId && data.selectedTemplateId !== lead.selectedTemplateId) {
+              history.push({ action: `[Massa] Modelo alterado`, createdAt: now });
+            }
+
+            const finalLead = { ...lead, ...updatedData, history };
+            
+            if (auth?.currentUser && db) {
+              const leadRef = doc(db!, `users/${auth!.currentUser!.uid}/leads`, lead.id);
+              setDoc(leadRef, finalLead).catch(console.error);
+            }
+            return finalLead;
+          }
+          return lead;
+        });
+        return { leads: updatedLeads };
+      }),
+
+      bulkDeleteLeads: (ids) => set((state) => {
+        if (auth?.currentUser && db) {
+          ids.forEach(id => {
+            const leadRef = doc(db!, `users/${auth!.currentUser!.uid}/leads`, id);
+            deleteDoc(leadRef).catch(console.error);
+          });
+        }
+        return {
+          leads: state.leads.filter(lead => !ids.includes(lead.id))
+        };
+      })
     }),
     {
       name: 'lkzap-leads-storage',

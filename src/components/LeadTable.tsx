@@ -37,7 +37,7 @@ const LOCALSTORAGE_KEY = 'lkzap_table_column_widths_v1';
 const DEFAULT_WIDTHS = [320, 170, 120, 120, 200, 160];
 
 export const LeadTable = () => {
-  const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter } = useLeadStore();
+  const { leads, updateLead, deleteLead, cooldownUntil, setCooldown, incrementSendsToday, dashboardFilter, setDashboardFilter, bulkUpdateLeads, bulkDeleteLeads } = useLeadStore();
   const { banks, origins, messageTemplates, leadStatuses, dashboardCards } = useSettingsStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,6 +67,10 @@ export const LeadTable = () => {
   const [now, setNow] = useState(Date.now());
   const [hydrated, setHydrated] = useState(false);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkType, setBulkType] = useState<string>('');
+  const [bulkValue, setBulkValue] = useState<string>('');
 
   // Column resizing state
   const [columnWidths, setColumnWidths] = useState<number[]>(() => {
@@ -79,7 +83,7 @@ export const LeadTable = () => {
     } catch (e) {
       // ignore
     }
-    return DEFAULT_WIDTHS;
+    return [50, 320, 170, 120, 120, 200, 160];
   });
   const resizingRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
 
@@ -346,7 +350,59 @@ export const LeadTable = () => {
     handleSendWhatsApp(candidate);
   };
 
-  const columns = ['Nome / Origem','WhatsApp','Banco','Valor','Status / Fila','Ações'];
+  const columns = ['', 'Nome / Origem','WhatsApp','Banco','Valor','Status / Fila','Ações'];
+
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.length === filteredLeads.length) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(filteredLeads.map(l => l.id));
+    }
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedLeadIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = (type: string) => {
+    setBulkType(type);
+    setBulkValue('');
+    setIsBulkModalOpen(true);
+  };
+
+  const confirmBulkAction = () => {
+    if (!bulkType || !bulkValue) return;
+    
+    const labelMap: Record<string, string> = {
+      status: 'Status',
+      queue: 'Fila',
+      bank: 'Banco',
+      origin: 'Origem',
+      template: 'Modelo de Mensagem'
+    };
+
+    if (window.confirm(`Deseja aplicar a alteração de ${labelMap[bulkType]} para ${selectedLeadIds.length} clientes?`)) {
+      const updateData: Partial<Lead> = {};
+      if (bulkType === 'status') updateData.status = bulkValue;
+      if (bulkType === 'queue') updateData.queue = bulkValue as any;
+      if (bulkType === 'bank') updateData.bank = bulkValue;
+      if (bulkType === 'origin') updateData.origin = bulkValue;
+      if (bulkType === 'template') updateData.selectedTemplateId = bulkValue;
+
+      bulkUpdateLeads(selectedLeadIds, updateData);
+      setSelectedLeadIds([]);
+      setIsBulkModalOpen(false);
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    if (window.confirm(`TEM CERTEZA que deseja EXCLUIR ${selectedLeadIds.length} clientes? Esta ação é irreversível.`)) {
+      bulkDeleteLeads(selectedLeadIds);
+      setSelectedLeadIds([]);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -487,6 +543,30 @@ export const LeadTable = () => {
         </button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedLeadIds.length > 0 && (
+        <div className="bg-emerald-600 text-white p-3 rounded-xl flex items-center justify-between shadow-lg animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-4">
+            <span className="font-black uppercase tracking-widest text-xs px-3 py-1 bg-white/20 rounded-full">
+              {selectedLeadIds.length} Selecionados
+            </span>
+            <div className="flex gap-2">
+              <button onClick={() => handleBulkAction('status')} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors uppercase">Mudar Status</button>
+              <button onClick={() => handleBulkAction('queue')} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors uppercase">Mudar Fila</button>
+              <button onClick={() => handleBulkAction('bank')} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors uppercase">Mudar Banco</button>
+              <button onClick={() => handleBulkAction('origin')} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors uppercase">Mudar Origem</button>
+              <button onClick={() => handleBulkAction('template')} className="text-[10px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors uppercase">Mudar Modelo</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={confirmBulkDelete} className="text-[10px] font-black bg-rose-500 hover:bg-rose-600 px-4 py-2 rounded-lg transition-colors uppercase flex items-center gap-2 shadow-sm">
+              <Trash2 size={14} /> Excluir Selecionados
+            </button>
+            <button onClick={() => setSelectedLeadIds([])} className="text-white/70 hover:text-white"><XCircle size={20} /></button>
+          </div>
+        </div>
+      )}
+
       <div className="glass-panel rounded-xl overflow-hidden border border-slate-200/50 dark:border-slate-800/50 shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left table-fixed">
@@ -500,7 +580,16 @@ export const LeadTable = () => {
                 {columns.map((col: string, idx: number) => (
                   <th key={col} className={`px-6 py-4 relative border-r border-slate-200/30 dark:border-slate-700/40 ${idx === 3 ? 'text-right' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <span>{col}</span>
+                      {idx === 0 ? (
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                          checked={selectedLeadIds.length > 0 && selectedLeadIds.length === filteredLeads.length}
+                          onChange={toggleSelectAll}
+                        />
+                      ) : (
+                        <span>{col}</span>
+                      )}
                       {idx < columns.length - 1 && (
                         <div onMouseDown={(e) => startResize(e, idx)} className="w-2 h-6 cursor-col-resize" title="Arrastar para redimensionar" />
                       )}
@@ -522,7 +611,15 @@ export const LeadTable = () => {
                 </tr>
               ) : (
                 filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all">
+                  <tr key={lead.id} className={`hover:bg-slate-50/80 dark:hover:bg-slate-900/30 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
+                    <td className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                        checked={selectedLeadIds.includes(lead.id)}
+                        onChange={() => toggleSelectRow(lead.id)}
+                      />
+                    </td>
                     <td className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
@@ -531,9 +628,14 @@ export const LeadTable = () => {
                           {lead.outdated && <span title="Dados desatualizados"><AlertCircle size={14} className="text-red-500" /></span>}
                         </span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {lead.origin && (
-                             <span className="text-[9px] text-slate-500 bg-slate-100 px-1 rounded font-bold uppercase">{lead.origin}</span>
-                          )}
+                          <select 
+                            value={lead.origin || ''}
+                            onChange={(e) => updateLead(lead.id, { origin: e.target.value })}
+                            className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 border-none rounded px-1 py-0.5 outline-none cursor-pointer uppercase"
+                          >
+                            <option value="">(Sem Origem)</option>
+                            {origins.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                          </select>
                           {(lead.tags || []).map((tagId: string) => {
                             const tag = useSettingsStore.getState().tags.find((t: any) => t.id === tagId);
                             if (!tag) return null;
@@ -758,6 +860,77 @@ export const LeadTable = () => {
                     <Send size={20} /> Confirmar Envio
                  </button>
                </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Action Config Modal */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="glass-panel w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-black uppercase tracking-widest text-slate-500 text-sm">Aplicar em Massa</h3>
+              <button onClick={() => setIsBulkModalOpen(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Selecione o novo valor para aplicar aos <span className="font-bold text-emerald-600">{selectedLeadIds.length}</span> clientes selecionados:
+              </p>
+              
+              {bulkType === 'status' && (
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  <option value="">Selecione um status...</option>
+                  {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </select>
+              )}
+
+              {bulkType === 'queue' && (
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  <option value="">Selecione uma fila...</option>
+                  <option value="Pronto para enviar">Pronto para enviar</option>
+                  <option value="Aguardando">Aguardando</option>
+                  <option value="Frio">Frio</option>
+                  <option value="Reabordar">Reabordar</option>
+                  <option value="Higienização">Higienização</option>
+                </select>
+              )}
+
+              {bulkType === 'bank' && (
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  <option value="">Selecione um banco...</option>
+                  {banks.map(b => (
+                    <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                      {typeof b === 'string' ? b : b.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {bulkType === 'origin' && (
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  <option value="">Selecione uma origem...</option>
+                  {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              )}
+
+              {bulkType === 'template' && (
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
+                  <option value="">Selecione um modelo...</option>
+                  {messageTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-500 hover:bg-slate-50">Cancelar</button>
+                <button 
+                  onClick={confirmBulkAction} 
+                  disabled={!bulkValue}
+                  className="flex-[2] py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest disabled:bg-slate-300"
+                >
+                  Aplicar Agora
+                </button>
+              </div>
             </div>
           </div>
         </div>
