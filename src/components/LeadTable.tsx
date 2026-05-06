@@ -26,12 +26,14 @@ import {
   History,
   Tag as TagIcon,
   MessageSquare,
-  Send
+  Send,
+  Image as ImageIcon
 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ImportModal } from './ImportModal';
 import { EditLeadModal } from './EditLeadModal';
 import { UraImportModal } from './UraImportModal';
+import { OfferImageGenerator } from './OfferImageGenerator';
 
 const LOCALSTORAGE_KEY = 'lkzap:table:columnWidths';
 const DEFAULT_WIDTHS: Record<string, number> = {
@@ -84,6 +86,7 @@ export const LeadTable = () => {
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'asc' | 'desc' | null }>({ key: null, direction: null });
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [offerLead, setOfferLead] = useState<{ name: string; availableValue: number; bank: string } | null>(null);
 
   // Column resizing state
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -985,8 +988,13 @@ export const LeadTable = () => {
                             ))}
                           </select>
                         </div>
-                        <div className="inline-flex gap-1">
+                        <div className="inline-flex gap-1 flex-wrap">
                           <button onClick={() => handleSendWhatsApp(lead)} disabled={isCooldownActive} className="p-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm active:scale-95" title="Enviar WhatsApp"><Send size={16} /></button>
+                          <button 
+                            onClick={() => setOfferLead({ name: lead.name, availableValue: lead.availableValue, bank: lead.bank })} 
+                            className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 dark:bg-amber-900/20 transition-all" 
+                            title="Gerar Imagem de Oferta"
+                          ><ImageIcon size={16} /></button>
                           <button onClick={() => handleShowHistory(lead)} className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 transition-all" title="Histórico"><History size={16} /></button>
                           <button onClick={() => handleEdit(lead)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 transition-all" title="Editar"><Edit2 size={16} /></button>
                           <button onClick={() => handleDelete(lead)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all" title="Excluir"><Trash2 size={16} /></button>
@@ -1006,6 +1014,10 @@ export const LeadTable = () => {
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
       <EditLeadModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} lead={currentLead} />
       <UraImportModal isOpen={isUraModalOpen} onClose={() => setIsUraModalOpen(false)} />
+
+      {offerLead && (
+        <OfferImageGenerator lead={offerLead} onClose={() => setOfferLead(null)} />
+      )}
 
       {/* History Modal */}
       {isHistoryModalOpen && currentLead && (
