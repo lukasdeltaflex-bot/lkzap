@@ -103,13 +103,19 @@ export default function SettingsPage() {
     updateDashboardCard,
     reorderDashboardCards,
     addDashboardCard,
-    removeDashboardCard
+    removeDashboardCard,
+    density,
+    fontFamily,
+    fontSize,
+    setDensity,
+    setFontFamily,
+    setFontSize
   } = useSettingsStore();
 
   const router = useRouter();
 
   // Navigation state
-  const [activeTab, setActiveTab] = useState<'geral' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'personalizacao' | 'bancos' | 'mensagens' | 'status' | 'dashboard'>('geral');
   
   // Local form states
   const [newBank, setNewBank] = useState("");
@@ -195,6 +201,7 @@ export default function SettingsPage() {
           <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white mb-4 px-2">Configurações</h2>
           {[
             { id: 'geral', label: 'Gerais', icon: ImageIcon },
+            { id: 'personalizacao', label: 'Personalização', icon: Activity },
             { id: 'bancos', label: 'Bancos', icon: Building2 },
             { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
             { id: 'status', label: 'Status Leads', icon: Activity },
@@ -281,6 +288,77 @@ export default function SettingsPage() {
                       </div>
                     </SortableContext>
                   </DndContext>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'personalizacao' && (
+            <div className="glass-panel p-6 rounded-2xl animate-in fade-in duration-300 space-y-8">
+              <h3 className="text-lg font-bold font-outfit text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                <Activity size={20} className="text-emerald-500" /> Visual e Densidade
+              </h3>
+
+              <div className="space-y-6">
+                {/* Density Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">Densidade Visual</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[ 
+                      { id: 'comfortable', label: 'Confortável', desc: 'Espaçamento padrão' },
+                      { id: 'compact', label: 'Compacta', desc: 'Mais leads na tela' }
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setDensity(opt.id as any)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${density === opt.id ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200'}`}
+                      >
+                        <p className={`font-bold text-sm ${density === opt.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>{opt.label}</p>
+                        <p className="text-[10px] text-slate-500">{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <hr className="border-slate-100 dark:border-slate-800" />
+
+                {/* Font Family */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">Fonte do Sistema</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {['Inter', 'Poppins', 'Roboto', 'Montserrat'].map(font => (
+                      <button
+                        key={font}
+                        onClick={() => setFontFamily(font as any)}
+                        className={`py-3 px-2 rounded-xl border-2 transition-all ${fontFamily === font ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-100 dark:border-slate-800 text-slate-500 hover:border-slate-200'}`}
+                        style={{ fontFamily: font }}
+                      >
+                        <span className="text-xs font-bold">{font}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <hr className="border-slate-100 dark:border-slate-800" />
+
+                {/* Font Size */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">Tamanho do Texto</label>
+                  <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+                    {([
+                      { id: 'small', label: 'Pequena' },
+                      { id: 'medium', label: 'Média' },
+                      { id: 'large', label: 'Grande' }
+                    ] as const).map(size => (
+                      <button
+                        key={size.id}
+                        onClick={() => setFontSize(size.id)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${fontSize === size.id ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        {size.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

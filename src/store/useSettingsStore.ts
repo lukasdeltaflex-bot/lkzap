@@ -22,6 +22,9 @@ interface SettingsStore {
   tags: Tag[];
   logoBase64: string | null;
   dashboardCards: DashboardCardConfig[];
+  density: 'comfortable' | 'compact';
+  fontFamily: 'Inter' | 'Poppins' | 'Roboto' | 'Montserrat';
+  fontSize: 'small' | 'medium' | 'large';
   
   // Actions
   updateDashboardCard: (id: string, data: Partial<DashboardCardConfig>) => void;
@@ -59,6 +62,9 @@ interface SettingsStore {
   reorderTemplates: (templates: MessageTemplate[]) => void;
   
   setLogo: (base64: string | null) => void;
+  setDensity: (density: 'comfortable' | 'compact') => void;
+  setFontFamily: (font: 'Inter' | 'Poppins' | 'Roboto' | 'Montserrat') => void;
+  setFontSize: (size: 'small' | 'medium' | 'large') => void;
   syncSettings: () => Promise<void>;
 }
 
@@ -148,6 +154,9 @@ export const useSettingsStore = create<SettingsStore>()(
       tags: DEFAULT_TAGS,
       logoBase64: null,
       dashboardCards: DEFAULT_DASHBOARD_CARDS,
+      density: 'comfortable',
+      fontFamily: 'Inter',
+      fontSize: 'medium',
 
       updateDashboardCard: (id, data) => set((state) => ({
         dashboardCards: (state.dashboardCards || DEFAULT_DASHBOARD_CARDS).map(c => c.id === id ? { ...c, ...data } : c)
@@ -259,6 +268,10 @@ export const useSettingsStore = create<SettingsStore>()(
         set({ logoBase64: base64 });
         pushSettings({ logoBase64: base64 });
       },
+
+      setDensity: (density) => set({ density }),
+      setFontFamily: (fontFamily) => set({ fontFamily }),
+      setFontSize: (fontSize) => set({ fontSize }),
 
       syncSettings: async () => {
         if (!auth?.currentUser || !db) return;

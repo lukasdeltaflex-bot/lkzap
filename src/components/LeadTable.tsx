@@ -808,7 +808,7 @@ export const LeadTable = () => {
               ))}
             </colgroup>
             <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/50 font-bold border-b border-slate-100 dark:border-slate-800">
-              <tr>
+              <tr className="lead-table-header">
                 {COLUMN_KEYS.map((key, idx) => {
                   const isSticky = idx <= 2;
                   let stickyLeft = 0;
@@ -879,7 +879,10 @@ export const LeadTable = () => {
                 </tr>
               ) : (
                 paginatedLeads.map((lead) => (
-                  <tr key={lead.id} className={`hover:bg-slate-800/60 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-500/10 border-emerald-500/30' : ''}`}>
+                  <tr 
+                    key={lead.id} 
+                    className={`group lead-table-row border-b border-slate-100/50 dark:border-slate-800/30 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-500/10 border-emerald-500/30' : ''}`}
+                  >
                     <td 
                       data-col="selection" 
                       style={{ position: 'sticky', left: '0', zIndex: 10 }}
@@ -1051,7 +1054,7 @@ export const LeadTable = () => {
         </div>
         
         {/* Pagination Controls */}
-        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 font-medium">Linhas por página:</span>
             <select 

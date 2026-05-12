@@ -30,11 +30,47 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   @apply antialiased transition-colors duration-200;
 }
 
-/* Glass Panels - Melhorados para modo escuro real */
+/* Font Customization */
+.font-inter { font-family: 'Inter', sans-serif; }
+.font-poppins { font-family: 'Poppins', sans-serif; }
+.font-roboto { font-family: 'Roboto', sans-serif; }
+.font-montserrat { font-family: 'Montserrat', sans-serif; }
+
+/* Font Size Customization */
+.font-size-small { font-size: 0.8125rem; }
+.font-size-small .text-xs { font-size: 0.65rem; }
+.font-size-small .text-sm { font-size: 0.75rem; }
+.font-size-small .text-lg { font-size: 1rem; }
+
+.font-size-medium { font-size: 0.875rem; }
+
+.font-size-large { font-size: 0.9375rem; }
+.font-size-large .text-xs { font-size: 0.8rem; }
+.font-size-large .text-sm { font-size: 0.9375rem; }
+
+/* Density Customization (Compact Mode) */
+.density-compact .lead-table-row td {
+  @apply py-1.5 px-4;
+}
+.density-compact .lead-table-header th {
+  @apply py-2 px-4;
+}
+.density-compact input, 
+.density-compact select, 
+.density-compact button.compact-action {
+  @apply py-1.5;
+}
+.density-compact .glass-panel {
+  @apply p-3;
+}
+.density-compact .dashboard-card {
+  @apply p-3;
+}
+
+/* Glass Panels */
 .glass-panel {
   @apply bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 transition-all;
 }
@@ -43,19 +79,38 @@ body {
   @apply bg-white/70 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 transition-all;
 }
 
-/* Base style for inputs and buttons in light mode */
-input, select, textarea {
-  @apply text-slate-900 bg-white dark:text-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500;
+/* Robust Light Mode visibility for all elements */
+:not(.dark) body {
+  @apply text-slate-900;
 }
 
-/* Specific fix for dropdown options visibility */
-select option {
-  @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-white;
+:not(.dark) input, :not(.dark) select, :not(.dark) textarea {
+  @apply !text-slate-900 !bg-white !border-slate-300 !placeholder-slate-400;
 }
 
-/* Hover/Active states for better UX in light mode */
-.light button:not(:disabled):hover {
-  @apply brightness-95;
+:not(.dark) label {
+  @apply !text-slate-700;
+}
+
+:not(.dark) select option {
+  @apply !bg-white !text-slate-900;
+}
+
+:not(.dark) .text-slate-400 { color: #64748b !important; }
+:not(.dark) .text-slate-500 { color: #475569 !important; }
+:not(.dark) .bg-slate-50 { background-color: #f1f5f9 !important; }
+:not(.dark) .bg-slate-50\/50 { background-color: rgba(241, 245, 249, 0.5) !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 dark:bg-slate-800 rounded-full hover:bg-slate-400 dark:hover:bg-slate-700 transition-colors;
 }
 
 /* Custom Resize Handle */
@@ -75,15 +130,4 @@ select option {
 
 #resize-line.visible {
   @apply block;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-800 rounded-full hover:bg-slate-400 dark:hover:bg-slate-700 transition-colors;
 }
