@@ -2,7 +2,7 @@
 
 @layer base {
   html {
-    background-color: #020617;
+    @apply transition-colors duration-200;
   }
   
   /* Melhora o contraste padrão para textos no dark mode */
@@ -43,14 +43,19 @@ body {
   @apply bg-white/70 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 transition-all;
 }
 
-/* Inputs padrão para dark mode */
+/* Base style for inputs and buttons in light mode */
 input, select, textarea {
-  @apply dark:placeholder-slate-500;
+  @apply text-slate-900 bg-white dark:text-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500;
 }
 
-/* Fix dropdown contrast */
+/* Specific fix for dropdown options visibility */
 select option {
   @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-white;
+}
+
+/* Hover/Active states for better UX in light mode */
+.light button:not(:disabled):hover {
+  @apply brightness-95;
 }
 
 /* Custom Resize Handle */
