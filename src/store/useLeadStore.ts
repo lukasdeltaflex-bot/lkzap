@@ -51,10 +51,12 @@ export const useLeadStore = create<LeadStore>()(
       setDashboardFilter: (filter) => set({ dashboardFilter: filter }),
 
       addLead: (leadData) => set((state) => {
+        const now = new Date().toISOString();
         const newLead: Lead = { 
           ...leadData, 
           id: crypto.randomUUID(),
-          history: [{ action: 'Lead criado', createdAt: new Date().toISOString() }]
+          createdAt: now,
+          history: [{ action: 'Lead criado', createdAt: now }]
         };
         
         // Async push to firestore if logged in
@@ -64,7 +66,7 @@ export const useLeadStore = create<LeadStore>()(
         }
 
         return {
-          leads: [newLead, ...state.leads]
+          leads: [...state.leads, newLead] // Add to end as requested
         };
       }),
 
@@ -74,28 +76,38 @@ export const useLeadStore = create<LeadStore>()(
         set((state) => {
           const updatedLeads = state.leads.map(lead => {
             if (lead.id === id) {
+              const now = new Date().toISOString();
               const updatedData = { ...data };
               const history: HistoryEntry[] = [...(lead.history || [])];
               
+              let interactionChanged = false;
+
               // Record significant changes in history
               if (data.availableValue !== undefined && data.availableValue !== lead.availableValue) {
-                updatedData.availableValueUpdatedAt = new Date().toISOString();
+                updatedData.availableValueUpdatedAt = now;
                 history.push({ 
                   action: `Valor alterado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.availableValue)} -> ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.availableValue)}`, 
-                  createdAt: new Date().toISOString() 
+                  createdAt: now 
                 });
               }
               if (data.status && data.status !== lead.status) {
-                history.push({ action: `Status alterado: ${lead.status} -> ${data.status}`, createdAt: new Date().toISOString() });
+                history.push({ action: `Status alterado: ${lead.status} -> ${data.status}`, createdAt: now });
+                interactionChanged = true;
               }
               if (data.bank && data.bank !== lead.bank) {
-                history.push({ action: `Banco alterado: ${lead.bank} -> ${data.bank}`, createdAt: new Date().toISOString() });
+                history.push({ action: `Banco alterado: ${lead.bank} -> ${data.bank}`, createdAt: now });
               }
               if (data.queue && data.queue !== lead.queue) {
-                history.push({ action: `Fila alterada: ${lead.queue} -> ${data.queue}`, createdAt: new Date().toISOString() });
+                history.push({ action: `Fila alterada: ${lead.queue} -> ${data.queue}`, createdAt: now });
+                interactionChanged = true;
               }
               if (data.lastSendDate && data.lastSendDate !== lead.lastSendDate) {
-                history.push({ action: 'Mensagem enviada', createdAt: new Date().toISOString() });
+                history.push({ action: 'Mensagem enviada', createdAt: now });
+                interactionChanged = true;
+              }
+
+              if (interactionChanged) {
+                updatedData.lastInteractionAt = now;
               }
 
               const finalLead = { ...lead, ...updatedData, history };
@@ -212,27 +224,34 @@ export const useLeadStore = create<LeadStore>()(
       bulkUpdateLeads: (ids, data) => set((state) => {
         const now = new Date().toISOString();
         const updatedLeads = state.leads.map(lead => {
-          if (ids.includes(lead.id)) {
-            const updatedData = { ...data };
-            const history: HistoryEntry[] = [...(lead.history || [])];
+            if (ids.includes(lead.id)) {
+              const updatedData = { ...data };
+              const history: HistoryEntry[] = [...(lead.history || [])];
+              let interactionChanged = false;
 
-            if (data.status && data.status !== lead.status) {
-              history.push({ action: `[Massa] Status: ${lead.status} -> ${data.status}`, createdAt: now });
-            }
-            if (data.bank && data.bank !== lead.bank) {
-              history.push({ action: `[Massa] Banco: ${lead.bank} -> ${data.bank}`, createdAt: now });
-            }
-            if (data.queue && data.queue !== lead.queue) {
-              history.push({ action: `[Massa] Fila: ${lead.queue} -> ${data.queue}`, createdAt: now });
-            }
-            if (data.origin && data.origin !== lead.origin) {
-              history.push({ action: `[Massa] Origem: ${lead.origin} -> ${data.origin}`, createdAt: now });
-            }
-            if (data.selectedTemplateId && data.selectedTemplateId !== lead.selectedTemplateId) {
-              history.push({ action: `[Massa] Modelo alterado`, createdAt: now });
-            }
+              if (data.status && data.status !== lead.status) {
+                history.push({ action: `[Massa] Status: ${lead.status} -> ${data.status}`, createdAt: now });
+                interactionChanged = true;
+              }
+              if (data.bank && data.bank !== lead.bank) {
+                history.push({ action: `[Massa] Banco: ${lead.bank} -> ${data.bank}`, createdAt: now });
+              }
+              if (data.queue && data.queue !== lead.queue) {
+                history.push({ action: `[Massa] Fila: ${lead.queue} -> ${data.queue}`, createdAt: now });
+                interactionChanged = true;
+              }
+              if (data.origin && data.origin !== lead.origin) {
+                history.push({ action: `[Massa] Origem: ${lead.origin} -> ${data.origin}`, createdAt: now });
+              }
+              if (data.selectedTemplateId && data.selectedTemplateId !== lead.selectedTemplateId) {
+                history.push({ action: `[Massa] Modelo alterado`, createdAt: now });
+              }
 
-            const finalLead = { ...lead, ...updatedData, history };
+              if (interactionChanged) {
+                updatedData.lastInteractionAt = now;
+              }
+
+              const finalLead = { ...lead, ...updatedData, history };
             
             if (auth?.currentUser && db) {
               const leadRef = doc(db!, `users/${auth!.currentUser!.uid}/leads`, lead.id);

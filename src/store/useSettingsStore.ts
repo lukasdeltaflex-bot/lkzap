@@ -85,7 +85,7 @@ const DEFAULT_TEMPLATES: MessageTemplate[] = [
     id: 'tmpl-1',
     name: 'Abordagem Padrão',
     tabId: 'tab-1',
-    content: '💳 Olá, {nome}! Você tem {valor} disponíveis para saque complementar do seu cartão {banco}.\nLiberação rápida em até 48h ✅\nSem aumento de desconto no seu INSS ❌📉\nDigite 1 para receber o link.',
+    content: '💳 {nome}, você tem *{valor} DISPONÍVEIS* para saque complementar do seu cartão {banco}!\n\nLiberação rápida em até *48h* ✅\n*SEM* aumento de desconto! ❌📉\n*Valor será depositado na sua conta.* 💰🏦\n\n👉 Digite *1* para *Receber o link* de confirmação e liberação.',
     isActive: true,
     isDefault: true
   }
@@ -321,6 +321,17 @@ export const useSettingsStore = create<SettingsStore>()(
         if (!persistedState.tags) {
           persistedState.tags = DEFAULT_TAGS;
         }
+        
+        // Migration to fix broken emojis/templates
+        if (Array.isArray(persistedState.messageTemplates)) {
+          persistedState.messageTemplates = persistedState.messageTemplates.map((t: MessageTemplate) => {
+            if (t.content.includes('') || t.content.includes('\uFFFD')) {
+              return { ...t, content: DEFAULT_TEMPLATES[0].content };
+            }
+            return t;
+          });
+        }
+
         return persistedState;
       }
     }

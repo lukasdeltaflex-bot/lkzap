@@ -87,6 +87,11 @@ export const LeadTable = () => {
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [offerLead, setOfferLead] = useState<{ name: string; availableValue: number; bank: string; phone?: string } | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [isSending, setIsSending] = useState(false);
 
   // Column resizing state
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -269,11 +274,24 @@ export const LeadTable = () => {
         if (!matchesStatus || !matchesQueue || !matchesDate) return false;
       }
       
-      return matchesDate;
     });
-
-    // 2. Sort
-    if (sortConfig.key && sortConfig.direction) {
+    
+    // 2. Sort by interaction (Rule 1 & Rule 3)
+    // If no explicit sort, use default: lastInteractionAt desc, then createdAt asc
+    if (!sortConfig.key) {
+      result.sort((a, b) => {
+        const dateA = a.lastInteractionAt ? new Date(a.lastInteractionAt).getTime() : 0;
+        const dateB = b.lastInteractionAt ? new Date(b.lastInteractionAt).getTime() : 0;
+        
+        if (dateB !== dateA) return dateB - dateA;
+        
+        // If no interaction, sort by creation (older first for new leads)
+        const createA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return createA - createB;
+      });
+    } else if (sortConfig.key && sortConfig.direction) {
+      // 3. Explicit Sort
       result.sort((a, b) => {
         let valA: any = (a as any)[sortConfig.key!];
         let valB: any = (b as any)[sortConfig.key!];
@@ -293,6 +311,17 @@ export const LeadTable = () => {
 
     return result;
   }, [leads, searchTerm, appliedFilters, hydrated, columnSearch, sortConfig, dashboardFilter]);
+
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredLeads.length / pageSize) || 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, appliedFilters, columnSearch, dashboardFilter]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -407,13 +436,15 @@ export const LeadTable = () => {
   };
 
   const confirmSendWhatsApp = (lead: Lead) => {
-    if (isCooldownActive) return;
+    if (isCooldownActive || isSending) return;
 
     const cleanPhone = normalizePhone(lead.phone);
     if (!cleanPhone || cleanPhone.length < 11) {
       alert('Telefone inválido para envio de WhatsApp.');
       return;
     }
+
+    setIsSending(true);
 
     const selectedTmplId = lead.selectedTemplateId;
     const template = messageTemplates.find((t: MessageTemplate) => t.id === selectedTmplId) || 
@@ -422,17 +453,21 @@ export const LeadTable = () => {
 
     const link = generateWhatsAppLink(lead, template.content);
     
-    updateLead(lead.id, {
-      status: 'Mensagem enviada',
-      lastAction: 'Chamado hoje',
-      lastSendDate: new Date().toISOString()
-    });
+    // Simulate loading for better UX
+    setTimeout(async () => {
+      await updateLead(lead.id, {
+        status: 'Mensagem enviada',
+        lastAction: 'Chamado hoje',
+        lastSendDate: new Date().toISOString()
+      });
 
-    incrementSendsToday();
-    setCooldown();
+      incrementSendsToday();
+      setCooldown();
 
-    window.open(link, '_blank');
-    setIsPreviewModalOpen(false);
+      window.open(link, '_blank');
+      setIsSending(false);
+      setIsPreviewModalOpen(false);
+    }, 1500);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -825,7 +860,7 @@ export const LeadTable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredLeads.length === 0 ? (
+              {paginatedLeads.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center text-slate-500 border-r border-slate-200/30 dark:border-slate-700/40">
                     <div className="flex flex-col items-center gap-2">
@@ -836,7 +871,7 @@ export const LeadTable = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => (
+                paginatedLeads.map((lead) => (
                   <tr key={lead.id} className={`hover:bg-slate-800/60 transition-all ${selectedLeadIds.includes(lead.id) ? 'bg-emerald-500/10 border-emerald-500/30' : ''}`}>
                     <td 
                       data-col="selection" 
@@ -1007,6 +1042,69 @@ export const LeadTable = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">Linhas por página:</span>
+            <select 
+              value={pageSize} 
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
+            >
+              {[25, 50, 100, 200].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-slate-500 font-medium">
+              Página <span className="text-slate-900 dark:text-slate-100 font-bold">{currentPage}</span> de <span className="font-bold">{totalPages}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setCurrentPage(1)} 
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Primeira Página"
+              >
+                <div className="flex -space-x-1">
+                  <ChevronRight size={18} className="rotate-180" />
+                  <ChevronRight size={18} className="rotate-180" />
+                </div>
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Página Anterior"
+              >
+                <ChevronRight size={18} className="rotate-180" />
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Próxima Página"
+              >
+                <ChevronRight size={18} />
+              </button>
+              <button 
+                onClick={() => setCurrentPage(totalPages)} 
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                title="Última Página"
+              >
+                <div className="flex -space-x-1">
+                  <ChevronRight size={18} />
+                  <ChevronRight size={18} />
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="resize-line" ref={guideLineRef} />
@@ -1103,12 +1201,25 @@ export const LeadTable = () => {
                   </div>
                </div>
 
-               <div className="flex gap-3 pt-2">
-                 <button onClick={() => setIsPreviewModalOpen(false)} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">Cancelar</button>
-                 <button onClick={() => confirmSendWhatsApp(previewLead)} className="flex-[2] py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
-                    <Send size={20} /> Confirmar Envio
-                 </button>
-               </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setIsPreviewModalOpen(false)} disabled={isSending} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-800 font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">Cancelar</button>
+                  <button 
+                    onClick={() => confirmSendWhatsApp(previewLead)} 
+                    disabled={isSending || isCooldownActive}
+                    className="flex-[2] py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed"
+                  >
+                     {isSending ? (
+                       <>
+                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                         Abrindo WhatsApp...
+                       </>
+                     ) : (
+                       <>
+                         <Send size={20} /> Confirmar Envio
+                       </>
+                     )}
+                  </button>
+                </div>
             </div>
           </div>
         </div>
@@ -1128,28 +1239,28 @@ export const LeadTable = () => {
               </p>
               
               {bulkType === 'status' && (
-                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                  <option value="">Selecione um status...</option>
-                  {leadStatuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold dark:text-slate-100 transition-all">
+                  <option value="" className="dark:bg-slate-900">Selecione um status...</option>
+                  {leadStatuses.map(s => <option key={s.id} value={s.name} className="dark:bg-slate-900">{s.name}</option>)}
                 </select>
               )}
 
               {bulkType === 'queue' && (
-                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                  <option value="">Selecione uma fila...</option>
-                  <option value="Pronto para enviar">Pronto para enviar</option>
-                  <option value="Aguardando">Aguardando</option>
-                  <option value="Frio">Frio</option>
-                  <option value="Reabordar">Reabordar</option>
-                  <option value="Higienização">Higienização</option>
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold dark:text-slate-100 transition-all">
+                  <option value="" className="dark:bg-slate-900">Selecione uma fila...</option>
+                  <option value="Pronto para enviar" className="dark:bg-slate-900">Pronto para enviar</option>
+                  <option value="Aguardando" className="dark:bg-slate-900">Aguardando</option>
+                  <option value="Frio" className="dark:bg-slate-900">Frio</option>
+                  <option value="Reabordar" className="dark:bg-slate-900">Reabordar</option>
+                  <option value="Higienização" className="dark:bg-slate-900">Higienização</option>
                 </select>
               )}
 
               {bulkType === 'bank' && (
-                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                  <option value="">Selecione um banco...</option>
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold dark:text-slate-100 transition-all">
+                  <option value="" className="dark:bg-slate-900">Selecione um banco...</option>
                   {banks.map(b => (
-                    <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name}>
+                    <option key={typeof b === 'string' ? b : b.id} value={typeof b === 'string' ? b : b.name} className="dark:bg-slate-900">
                       {typeof b === 'string' ? b : b.name}
                     </option>
                   ))}
@@ -1157,25 +1268,25 @@ export const LeadTable = () => {
               )}
 
               {bulkType === 'origin' && (
-                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                  <option value="">Selecione uma origem...</option>
-                  {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold dark:text-slate-100 transition-all">
+                  <option value="" className="dark:bg-slate-900">Selecione uma origem...</option>
+                  {origins.map(o => <option key={o} value={o} className="dark:bg-slate-900">{o}</option>)}
                 </select>
               )}
 
               {bulkType === 'template' && (
-                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold">
-                  <option value="">Selecione um modelo...</option>
-                  {messageTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 font-bold dark:text-slate-100 transition-all">
+                  <option value="" className="dark:bg-slate-900">Selecione um modelo...</option>
+                  {messageTemplates.map(t => <option key={t.id} value={t.id} className="dark:bg-slate-900">{t.name}</option>)}
                 </select>
               )}
 
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 rounded-xl border border-slate-200 font-bold text-slate-500 hover:bg-slate-50">Cancelar</button>
+                <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-800 font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">Cancelar</button>
                 <button 
                   onClick={confirmBulkAction} 
                   disabled={!bulkValue}
-                  className="flex-[2] py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest disabled:bg-slate-300"
+                  className="flex-[2] py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest disabled:bg-slate-300 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-all shadow-lg shadow-emerald-500/10"
                 >
                   Aplicar Agora
                 </button>

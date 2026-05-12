@@ -73,4 +73,6 @@ export interface Lead {
   history?: HistoryEntry[];
   notes?: string;
   tags?: string[];
+  lastInteractionAt?: string; // ISO String for sorting
+  createdAt?: string; // ISO String
 }

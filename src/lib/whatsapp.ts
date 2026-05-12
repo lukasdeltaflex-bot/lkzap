@@ -18,17 +18,29 @@ const replaceVariables = (content: string, lead: Lead) => {
 
 export const generateWhatsAppLink = (lead: Lead, templateContent: string): string => {
   const text = replaceVariables(templateContent, lead);
-  const encodedText = encodeURIComponent(text);
+  
+  // Implementation of permanent emoji fix
+  const cleanMessage = text
+    .normalize("NFC")
+    .replace(/\uFFFD/g, "")
+    .trim();
+
+  const encodedText = encodeURIComponent(cleanMessage);
   const cleanPhone = normalizePhone(lead.phone);
   
-  // Use https://wa.me/ or https://api.whatsapp.com/send
   return `https://wa.me/${cleanPhone}?text=${encodedText}`;
 };
 
 export const generateReabordagemLink = (lead: Lead, templateContent?: string): string => {
   const defaultText = `${lead.name}, vi que você ainda tem valor disponível para saque complementar.\nQuer que eu libere pra você hoje?`;
   const text = templateContent ? replaceVariables(templateContent, lead) : defaultText;
-  const encodedText = encodeURIComponent(text);
+  
+  const cleanMessage = text
+    .normalize("NFC")
+    .replace(/\uFFFD/g, "")
+    .trim();
+
+  const encodedText = encodeURIComponent(cleanMessage);
   const cleanPhone = normalizePhone(lead.phone);
 
   return `https://wa.me/${cleanPhone}?text=${encodedText}`;
