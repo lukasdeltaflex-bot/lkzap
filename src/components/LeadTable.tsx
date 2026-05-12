@@ -274,7 +274,14 @@ export const LeadTable = () => {
         if (!matchesStatus || !matchesQueue || !matchesDate) return false;
       }
       
+      return true; // Fix: Leads were disappearing because this was missing
     });
+
+    // Fallback: If filtered result is empty but we HAVE leads, and no filters are active, show all
+    const noFiltersActive = searchTerm === '' && !appliedFilters.bank && !appliedFilters.origin && !appliedFilters.status && !appliedFilters.queue && !dashboardFilter;
+    if (result.length === 0 && leads.length > 0 && noFiltersActive) {
+      result = [...leads];
+    }
     
     // 2. Sort by interaction (Rule 1 & Rule 3)
     // If no explicit sort, use default: lastInteractionAt desc, then createdAt asc
@@ -310,7 +317,7 @@ export const LeadTable = () => {
     }
 
     return result;
-  }, [leads, searchTerm, appliedFilters, hydrated, columnSearch, sortConfig, dashboardFilter]);
+  }, [leads, searchTerm, appliedFilters, hydrated, columnSearch, sortConfig, dashboardFilter, currentPage, pageSize]);
 
   const paginatedLeads = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
