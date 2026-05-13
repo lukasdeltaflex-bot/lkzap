@@ -54,7 +54,7 @@ export const EditLeadModal = ({ isOpen, onClose, lead }: Props) => {
                     cpf.replace(/\D/g, '').length === 11 && 
                     validateCPF(cpf) && 
                     phone.replace(/\D/g, "").length >= 10 && 
-                    (parseBRL(value) > 0 || origin.includes('URA')) && 
+                    parseBRL(value) >= 0 &&
                     bank && 
                     origin && 
                     status;

@@ -37,7 +37,7 @@ import { OfferImageGenerator } from './OfferImageGenerator';
 
 const LOCALSTORAGE_KEY = 'lkzap:table:columnWidths';
 const DEFAULT_WIDTHS: Record<string, number> = {
-  selection: 50,
+  selection: 36,
   nome: 320,
   whatsapp: 170,
   banco: 140,
@@ -611,25 +611,6 @@ export const LeadTable = () => {
   return (
     <div className="flex flex-col gap-4">
       {/* Search and Advanced Filters */}
-      {/* Bulk Action Bar */}
-      {selectedLeadIds.length > 0 && (
-        <div className="bg-emerald-600 text-white p-3 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/20 px-3 py-1 rounded-full font-bold text-sm">
-              {selectedLeadIds.length} selecionados
-            </div>
-            <button onClick={() => setSelectedLeadIds([])} className="text-emerald-100 hover:text-white text-sm font-medium">Limpar seleção</button>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-             <button onClick={() => handleBulkAction('bank')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Banco</button>
-             <button onClick={() => handleBulkAction('status')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Status</button>
-             <button onClick={() => handleBulkAction('queue')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Fila</button>
-             <button onClick={() => handleBulkAction('origin')} className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10">Trocar Origem</button>
-             <button onClick={confirmBulkDelete} className="bg-red-500/20 hover:bg-red-500/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-red-500/30 text-red-100">Excluir</button>
-          </div>
-        </div>
-      )}
 
       <div className="glass-panel p-4 rounded-xl flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-3">
@@ -801,7 +782,7 @@ export const LeadTable = () => {
                   key={key} 
                   style={{ 
                     width: `${columnWidths[key] || 100}px`, 
-                    minWidth: '80px',
+                    minWidth: key === 'selection' ? '36px' : '80px',
                     transition: resizingRef.current ? 'none' : 'width 0.1s ease'
                   }} 
                 />
@@ -812,8 +793,8 @@ export const LeadTable = () => {
                 {COLUMN_KEYS.map((key, idx) => {
                   const isSticky = idx <= 2;
                   let stickyLeft = 0;
-                  if (idx === 1) stickyLeft = columnWidths.selection || 50;
-                  if (idx === 2) stickyLeft = (columnWidths.selection || 50) + (columnWidths.nome || 320);
+                  if (idx === 1) stickyLeft = columnWidths.selection || 36;
+                  if (idx === 2) stickyLeft = (columnWidths.selection || 36) + (columnWidths.nome || 320);
 
                   return (
                     <th 
@@ -885,8 +866,8 @@ export const LeadTable = () => {
                   >
                     <td 
                       data-col="selection" 
-                      style={{ position: 'sticky', left: '0', zIndex: 10 }}
-                      className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                      style={{ position: 'sticky', left: '0', zIndex: 10, width: '36px', minWidth: '36px' }}
+                      className="px-2 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                     >
                       <input 
                         type="checkbox" 

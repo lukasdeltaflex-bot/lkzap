@@ -4,10 +4,15 @@
   html {
     @apply transition-colors duration-200;
   }
-  
-  /* Melhora o contraste padrão para textos no dark mode */
+
+  /* Dark mode base text */
   .dark body {
     @apply text-slate-200;
+  }
+
+  /* Light mode base text */
+  body {
+    @apply text-slate-900;
   }
 }
 
@@ -79,27 +84,57 @@ body {
   @apply bg-white/70 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 transition-all;
 }
 
-/* Robust Light Mode visibility for all elements */
-:not(.dark) body {
-  @apply text-slate-900;
+/* ============================================================
+   LIGHT MODE — garantir legibilidade sem quebrar o dark mode
+   ============================================================ */
+html:not(.dark) input,
+html:not(.dark) textarea {
+  color: #0f172a;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
 }
 
-:not(.dark) input, :not(.dark) select, :not(.dark) textarea {
-  @apply !text-slate-900 !bg-white !border-slate-300 !placeholder-slate-400;
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8;
 }
 
-:not(.dark) label {
-  @apply !text-slate-700;
+html:not(.dark) select {
+  color: #0f172a;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
 }
 
-:not(.dark) select option {
-  @apply !bg-white !text-slate-900;
+html:not(.dark) select option {
+  background-color: #ffffff;
+  color: #0f172a;
 }
 
-:not(.dark) .text-slate-400 { color: #64748b !important; }
-:not(.dark) .text-slate-500 { color: #475569 !important; }
-:not(.dark) .bg-slate-50 { background-color: #f1f5f9 !important; }
-:not(.dark) .bg-slate-50\/50 { background-color: rgba(241, 245, 249, 0.5) !important; }
+html:not(.dark) label {
+  color: #475569;
+}
+
+/* ============================================================
+   DARK MODE — garantir legibilidade premium
+   ============================================================ */
+.dark input,
+.dark textarea {
+  color: #f1f5f9;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark select {
+  color: #f1f5f9;
+}
+
+.dark select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
@@ -110,7 +145,10 @@ body {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-800 rounded-full hover:bg-slate-400 dark:hover:bg-slate-700 transition-colors;
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-600;
 }
 
 /* Custom Resize Handle */
