@@ -37,7 +37,7 @@ import { OfferImageGenerator } from './OfferImageGenerator';
 
 const LOCALSTORAGE_KEY = 'lkzap:table:columnWidths';
 const DEFAULT_WIDTHS: Record<string, number> = {
-  selection: 36,
+  selection: 40,
   nome: 320,
   whatsapp: 170,
   banco: 140,
@@ -79,6 +79,7 @@ export const LeadTable = () => {
   const [now, setNow] = useState(Date.now());
   const [hydrated, setHydrated] = useState(false);
   const [copiedCpf, setCopiedCpf] = useState<string | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkType, setBulkType] = useState<string>('');
@@ -498,6 +499,17 @@ export const LeadTable = () => {
     }
   };
 
+  const handleCopyPhone = (phone: string) => {
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      navigator.clipboard.writeText(cleanPhone);
+      setCopiedPhone(phone);
+      setTimeout(() => setCopiedPhone(null), 2000);
+    } catch (e) {
+      console.error('Erro ao copiar Telefone', e);
+    }
+  };
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
@@ -781,8 +793,9 @@ export const LeadTable = () => {
                 <col 
                   key={key} 
                   style={{ 
-                    width: `${columnWidths[key] || 100}px`, 
+                    width: key === 'selection' ? '40px' : `${columnWidths[key] || 100}px`, 
                     minWidth: key === 'selection' ? '36px' : '80px',
+                    maxWidth: key === 'selection' ? '48px' : undefined,
                     transition: resizingRef.current ? 'none' : 'width 0.1s ease'
                   }} 
                 />
@@ -793,23 +806,23 @@ export const LeadTable = () => {
                 {COLUMN_KEYS.map((key, idx) => {
                   const isSticky = idx <= 2;
                   let stickyLeft = 0;
-                  if (idx === 1) stickyLeft = columnWidths.selection || 36;
-                  if (idx === 2) stickyLeft = (columnWidths.selection || 36) + (columnWidths.nome || 320);
+                  if (idx === 1) stickyLeft = 40;
+                  if (idx === 2) stickyLeft = 40 + (columnWidths.nome || 320);
 
                   return (
                     <th 
                       key={key} 
                       data-col={key}
-                      style={isSticky ? { position: 'sticky', left: `${stickyLeft}px`, zIndex: 30 } : {}}
-                      className={`px-4 py-3 relative border-r border-slate-200/30 dark:border-slate-700/40 ${key === 'banco' ? 'text-right' : ''} ${isSticky ? 'bg-slate-50 dark:bg-slate-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : 'bg-slate-50/50 dark:bg-slate-800/50'}`}
+                      style={isSticky ? { position: 'sticky', left: `${stickyLeft}px`, zIndex: 30, width: key === 'selection' ? '40px' : undefined, minWidth: key === 'selection' ? '36px' : undefined, maxWidth: key === 'selection' ? '48px' : undefined } : {}}
+                      className={`py-3 relative border-r border-slate-200/30 dark:border-slate-700/40 ${key === 'selection' ? 'px-1 text-center' : 'px-4'} ${key === 'banco' ? 'text-right' : ''} ${isSticky ? 'bg-slate-50 dark:bg-slate-900 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : 'bg-slate-50/50 dark:bg-slate-800/50'}`}
                     >
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 cursor-pointer select-none group" onClick={() => key !== 'selection' && key !== 'acoes' && handleSort(key)}>
+                      <div className={`flex flex-col gap-2 ${key === 'selection' ? 'items-center justify-center' : ''}`}>
+                        <div className={`flex items-center gap-2 ${key === 'selection' ? 'justify-center w-full' : 'justify-between'}`}>
+                          <div className={`flex items-center gap-2 cursor-pointer select-none group ${key === 'selection' ? 'justify-center' : ''}`} onClick={() => key !== 'selection' && key !== 'acoes' && handleSort(key)}>
                             {key === 'selection' ? (
                               <input 
                                 type="checkbox" 
-                                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 m-auto" 
                                 checked={selectedLeadIds.length > 0 && selectedLeadIds.length === filteredLeads.length}
                                 onChange={toggleSelectAll}
                               />
@@ -822,7 +835,7 @@ export const LeadTable = () => {
                               </span>
                             )}
                           </div>
-                          {idx < COLUMN_KEYS.length - 1 && (
+                          {idx > 0 && idx < COLUMN_KEYS.length - 1 && (
                             <div 
                               onMouseDown={(e) => startResize(e, key)} 
                               onDoubleClick={() => handleAutoFit(key)}
@@ -866,19 +879,21 @@ export const LeadTable = () => {
                   >
                     <td 
                       data-col="selection" 
-                      style={{ position: 'sticky', left: '0', zIndex: 10, width: '36px', minWidth: '36px' }}
-                      className="px-2 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                      style={{ position: 'sticky', left: '0', zIndex: 10, width: '40px', minWidth: '36px', maxWidth: '48px' }}
+                      className="px-1 py-5 border-r border-slate-200/30 dark:border-slate-700/40 text-center bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                     >
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
-                        checked={selectedLeadIds.includes(lead.id)}
-                        onChange={() => toggleSelectRow(lead.id)}
-                      />
+                      <div className="flex justify-center w-full">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" 
+                          checked={selectedLeadIds.includes(lead.id)}
+                          onChange={() => toggleSelectRow(lead.id)}
+                        />
+                      </div>
                     </td>
                     <td 
                       data-col="nome" 
-                      style={{ position: 'sticky', left: `${columnWidths.selection || 50}px`, zIndex: 10 }}
+                      style={{ position: 'sticky', left: `40px`, zIndex: 10 }}
                       className="px-6 py-5 border-r border-slate-200/30 dark:border-slate-700/40 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                     >
                       <div className="flex flex-col">
@@ -910,7 +925,7 @@ export const LeadTable = () => {
                     </td>
                     <td 
                       data-col="whatsapp" 
-                      style={{ position: 'sticky', left: `${(columnWidths.selection || 50) + (columnWidths.nome || 320)}px`, zIndex: 10 }}
+                      style={{ position: 'sticky', left: `${40 + (columnWidths.nome || 320)}px`, zIndex: 10 }}
                       className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                     >
                       <div className="flex flex-col">
@@ -921,7 +936,13 @@ export const LeadTable = () => {
                           </button>
                         </div>
                         {copiedCpf === lead.cpf && <span className="text-[11px] text-emerald-600 mt-1">CPF copiado</span>}
-                        <span className="font-bold text-slate-700 dark:text-slate-200 text-xs mt-1">{formatDisplayPhone(lead.phone)}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">{formatDisplayPhone(lead.phone)}</span>
+                          <button onClick={() => handleCopyPhone(lead.phone)} className="p-1 rounded text-slate-400 hover:text-emerald-600" title="Copiar Telefone">
+                            {copiedPhone === lead.phone ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                        {copiedPhone === lead.phone && <span className="text-[11px] text-emerald-600 mt-1">Telefone copiado</span>}
                       </div>
                     </td>
                     <td data-col="banco" className="px-6 py-5 border-l border-slate-100 dark:border-slate-800/10 border-r border-slate-200/30 dark:border-slate-700/40">
